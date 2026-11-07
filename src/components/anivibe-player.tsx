@@ -38,35 +38,35 @@ const findArray = (value: unknown, keys: string[], depth = 0): unknown[] => {
   return [];
 };
 
-const getAnimeOptions = (payload: unknown): AnimeOption[] =>
-  findArray(payload, ["results", "items", "animes", "anime", "data"])
-    .map((item) => {
-      const record = asRecord(item);
-      if (!record) return null;
-      const id = Number(firstText(record, ["id", "anime_id", "shikimori_id", "shikimoriId"]));
-      const title = firstText(record, ["title_ru", "russian", "title", "name", "title_en"]);
-      if (!Number.isSafeInteger(id) || id < 1 || !title) return null;
-      return {
-        id,
-        title,
-        year: firstText(record, ["year", "season_year", "aired_year"]),
-        poster: firstText(record, ["poster", "image", "cover", "poster_url"]),
-      };
-    })
-    .filter((item): item is AnimeOption => item !== null)
-    .slice(0, 12);
+const getAnimeOptions = (payload: unknown): AnimeOption[] => {
+  const options: AnimeOption[] = [];
+  for (const item of findArray(payload, ["results", "items", "animes", "anime", "data"])) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const id = Number(firstText(record, ["id", "anime_id", "shikimori_id", "shikimoriId"]));
+    const title = firstText(record, ["title_ru", "russian", "title", "name", "title_en"]);
+    if (!Number.isSafeInteger(id) || id < 1 || !title) continue;
+    options.push({
+      id,
+      title,
+      year: firstText(record, ["year", "season_year", "aired_year"]),
+      poster: firstText(record, ["poster", "image", "cover", "poster_url"]),
+    });
+  }
+  return options.slice(0, 12);
+};
 
-const getEpisodes = (payload: unknown): EpisodeOption[] =>
-  findArray(payload, ["episodes", "items", "results", "data"])
-    .map((item) => {
-      const record = asRecord(item);
-      if (!record) return null;
-      const number = Number(firstText(record, ["number", "episode", "episode_number", "ordinal"]));
-      if (!Number.isSafeInteger(number) || number < 1) return null;
-      return { number, title: firstText(record, ["title", "name"]) };
-    })
-    .filter((item): item is EpisodeOption => item !== null)
-    .sort((a, b) => a.number - b.number);
+const getEpisodes = (payload: unknown): EpisodeOption[] => {
+  const options: EpisodeOption[] = [];
+  for (const item of findArray(payload, ["episodes", "items", "results", "data"])) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const number = Number(firstText(record, ["number", "episode", "episode_number", "ordinal"]));
+    if (!Number.isSafeInteger(number) || number < 1) continue;
+    options.push({ number, title: firstText(record, ["title", "name"]) });
+  }
+  return options.sort((a, b) => a.number - b.number);
+};
 
 const findEmbedUrl = (payload: unknown, depth = 0): string => {
   if (depth > 4) return "";
