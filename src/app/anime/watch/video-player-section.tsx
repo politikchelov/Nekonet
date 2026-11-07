@@ -409,8 +409,8 @@ const VideoPlayerSection = () => {
       ) : (
       <>
       <MiruPlayer
-        key={episodeData.sources?.[0]?.url}
-        episodeInfo={episodeData}
+        key={episodeData?.sources?.[0]?.url}
+        episodeInfo={episodeData!}
         serversData={{
           episodeId: activeEpisodeId,
           episodeNo: String(currentEpNumber),
