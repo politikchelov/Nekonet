@@ -85,9 +85,9 @@ export async function fetchAniListGraphQL<T = any>(
 
 
 
-type RussianTitleRecord = { malId?: number | string | null; russian?: string | null; rating?: string | null };
+type RussianTitleRecord = { malId?: number | string | null; name?: string | null; english?: string | null; synonyms?: string[] | null; russian?: string | null; rating?: string | null };
 
-async function withRussianTitles<T>(items: T[]): Promise<T[]> {
+export async function withRussianTitles<T>(items: T[]): Promise<T[]> {
   if (!items.length) return items;
 
   const mediaItems = items as Array<T & {
@@ -110,7 +110,7 @@ async function withRussianTitles<T>(items: T[]): Promise<T[]> {
 
   try {
     const fields = searchable.map(({ index, query }) =>
-      `a${index}: animes(search: ${JSON.stringify(query)}, limit: 10, censored: true) { malId russian rating }`
+      `a${index}: animes(search: ${JSON.stringify(query)}, limit: 10, censored: true) { malId name english synonyms russian rating }`
     );
     const gql = `query MirakuRussianTitles { ${fields.join("\n")} }`;
     const response = await fetch("https://shikimori.one/api/graphql", {
@@ -132,13 +132,15 @@ async function withRussianTitles<T>(items: T[]): Promise<T[]> {
     for (const entry of searchable) {
       const matches = payload.data[`a${entry.index}`];
       if (!Array.isArray(matches)) continue;
-      const match = matches.find((record: RussianTitleRecord) =>
-        record?.malId != null &&
-        String(record.malId) === entry.malId &&
-        typeof record.russian === "string" &&
-        record.russian.trim() &&
-        record.rating !== "rx"
-      );
+      const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      const wanted = normalize(entry.query);
+      const match = matches.find((record: RussianTitleRecord) => {
+        if (typeof record?.russian !== "string" || !record.russian.trim() || record.rating === "rx") return false;
+        if (entry.malId && record.malId != null && String(record.malId) === entry.malId) return true;
+        const candidates = [record.name, record.english, ...(record.synonyms || [])]
+          .filter((value): value is string => typeof value === "string" && !!value.trim());
+        return candidates.some((value) => normalize(value) === wanted);
+      });
       if (match?.russian) russianByMalId.set(entry.malId, match.russian.trim());
     }
 
