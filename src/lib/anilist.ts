@@ -104,7 +104,7 @@ export async function withRussianTitles<T>(items: T[]): Promise<T[]> {
       malId: item.idMal ? String(item.idMal) : "",
       query: (item.title?.english || item.title?.romaji || item.title?.native || "").trim(),
     }))
-    .filter((item) => item.malId && item.query);
+    .filter((item) => item.query);
 
   if (!searchable.length) return items;
 
@@ -128,11 +128,11 @@ export async function withRussianTitles<T>(items: T[]): Promise<T[]> {
     const payload = await response.json();
     if (payload?.errors?.length || !payload?.data) return items;
 
-    const russianByMalId = new Map<string, string>();
+    const russianByIndex = new Map<number, string>();
     for (const entry of searchable) {
       const matches = payload.data[`a${entry.index}`];
       if (!Array.isArray(matches)) continue;
-      const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      const normalize = (value: string) => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
       const wanted = normalize(entry.query);
       const match = matches.find((record: RussianTitleRecord) => {
         if (typeof record?.russian !== "string" || !record.russian.trim() || record.rating === "rx") return false;
@@ -141,11 +141,11 @@ export async function withRussianTitles<T>(items: T[]): Promise<T[]> {
           .filter((value): value is string => typeof value === "string" && !!value.trim());
         return candidates.some((value) => normalize(value) === wanted);
       });
-      if (match?.russian) russianByMalId.set(entry.malId, match.russian.trim());
+      if (match?.russian) russianByIndex.set(entry.index, match.russian.trim());
     }
 
-    return mediaItems.map((item) => {
-      const russian = item.idMal ? russianByMalId.get(String(item.idMal)) : undefined;
+    return mediaItems.map((item, index) => {
+      const russian = russianByIndex.get(index);
       if (!russian || !item.title) return item;
       return { ...item, title: { ...item.title, english: russian } } as T;
     });
