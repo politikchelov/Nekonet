@@ -14,7 +14,7 @@ type Props = {
 
 const LatestEpisodesAnime = ({ loading: initialLoading }: Props) => {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isFetching } = useGetRecentAnime(page, 14);
+  const { data, isLoading } = useGetRecentAnime(page, 14);
 
   const episodesList = data?.results || [];
   const hasNextPage = data?.hasNextPage ?? false;
