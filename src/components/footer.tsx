@@ -7,20 +7,19 @@ const Footer = () => {
       <div className="flex items-center gap-2">
         <Image
           src="/miru-logo.svg"
-          alt="Miru logo"
+          alt="Логотип NekoNet"
           width="40"
           height="40"
           className="rounded-xl shadow-md"
         />
         <span className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-500 to-cyan-400">
-          Miru
+          NekoNet
         </span>
       </div>
       <p className="text-xs text-gray-400 text-center max-w-xl">
-        Miru does not store any files on the server; it only displays metadata
-        and links to media hosted on 3rd party services.
+        NekoNet не хранит видеофайлы на своих серверах: сайт отображает информацию об аниме и ссылки на медиаматериалы сторонних сервисов.
       </p>
-      <p className="text-xs text-gray-500">&copy; {new Date().getFullYear()} Miru. All rights reserved.</p>
+      <p className="text-xs text-gray-500">&copy; {new Date().getFullYear()} NekoNet. Все права защищены.</p>
     </footer>
   );
 };
