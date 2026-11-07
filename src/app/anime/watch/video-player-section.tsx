@@ -152,9 +152,10 @@ const VideoPlayerSection = () => {
   ]);
 
   const isFallbackActive =
-    isSourceAvailable === false ||
-    useFallback ||
-    (!isLoadingData && (!episodeData || !episodeData.sources?.length));
+    !useAniVibe &&
+    (isSourceAvailable === false ||
+      useFallback ||
+      (!isLoadingData && (!episodeData || !episodeData.sources?.length)));
 
   // Listen to postMessage events from Fallback Player iframe (megaplay.buzz / megacloud)
   useEffect(() => {
