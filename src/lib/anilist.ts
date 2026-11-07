@@ -87,22 +87,32 @@ export async function fetchAniListGraphQL<T = any>(
 
 type RussianTitleRecord = { malId?: number | string | null; russian?: string | null; rating?: string | null };
 
-async function withRussianTitles<T>(
-  items: T[],
-  query = "",
-  page = 1,
-): Promise<T[]> {
+async function withRussianTitles<T>(items: T[]): Promise<T[]> {
   if (!items.length) return items;
-  try {
-    // Shikimori REST does not expose the MAL mapping reliably. Its GraphQL API
-    // provides malId and russian together, so use that pair for exact matching.
-    const safePage = Math.max(1, Math.min(1000, Math.floor(page) || 1));
-    const search = query.trim();
-    const filters = search
-      ? `search: ${JSON.stringify(search)}, limit: 50`
-      : `page: ${safePage}, limit: 50, order: popularity, censored: true`;
-    const gql = `query MirakuRussianTitles { animes(${filters}) { malId russian rating } }`;
 
+  const mediaItems = items as Array<T & {
+    idMal?: number | null;
+    title?: { english?: string | null; romaji?: string | null; native?: string | null };
+  }>;
+
+  // Build one GraphQL request containing one Shikimori title search per AniList
+  // item. A page number from AniList is NOT the same page in Shikimori, so
+  // matching two unrelated popularity pages cannot localize the catalog.
+  const searchable = mediaItems
+    .map((item, index) => ({
+      index,
+      malId: item.idMal ? String(item.idMal) : "",
+      query: (item.title?.english || item.title?.romaji || item.title?.native || "").trim(),
+    }))
+    .filter((item) => item.malId && item.query);
+
+  if (!searchable.length) return items;
+
+  try {
+    const fields = searchable.map(({ index, query }) =>
+      `a${index}: animes(search: ${JSON.stringify(query)}, limit: 10, censored: true) { malId russian rating }`
+    );
+    const gql = `query MirakuRussianTitles { ${fields.join("\n")} }`;
     const response = await fetch("https://shikimori.one/api/graphql", {
       method: "POST",
       headers: {
@@ -111,32 +121,31 @@ async function withRussianTitles<T>(
         "User-Agent": "Miraku/1.0 (anime catalog)",
       },
       body: JSON.stringify({ query: gql }),
-      next: { revalidate: 21600 },
-      signal: AbortSignal.timeout(9000),
+      signal: AbortSignal.timeout(12000),
     });
+
     if (!response.ok) return items;
-
     const payload = await response.json();
-    if (payload?.errors?.length) return items;
-    const records: RussianTitleRecord[] = Array.isArray(payload?.data?.animes)
-      ? payload.data.animes
-      : [];
+    if (payload?.errors?.length || !payload?.data) return items;
 
-    const titles = new Map<string, string>();
-    for (const record of records) {
-      const malId = record?.malId;
-      const russian = record?.russian?.trim();
-      if (malId && russian && record.rating !== "rx") titles.set(String(malId), russian);
+    const russianByMalId = new Map<string, string>();
+    for (const entry of searchable) {
+      const matches = payload.data[`a${entry.index}`];
+      if (!Array.isArray(matches)) continue;
+      const match = matches.find((record: RussianTitleRecord) =>
+        record?.malId != null &&
+        String(record.malId) === entry.malId &&
+        typeof record.russian === "string" &&
+        record.russian.trim() &&
+        record.rating !== "rx"
+      );
+      if (match?.russian) russianByMalId.set(entry.malId, match.russian.trim());
     }
 
-    return items.map((item) => {
-      const media = item as T & {
-        idMal?: number | null;
-        title?: { english?: string | null; romaji?: string | null; native?: string | null };
-      };
-      const russian = media.idMal ? titles.get(String(media.idMal)) : undefined;
-      if (!russian || !media.title) return item;
-      return { ...media, title: { ...media.title, english: russian } } as T;
+    return mediaItems.map((item) => {
+      const russian = item.idMal ? russianByMalId.get(String(item.idMal)) : undefined;
+      if (!russian || !item.title) return item;
+      return { ...item, title: { ...item.title, english: russian } } as T;
     });
   } catch {
     return items;
@@ -167,7 +176,7 @@ export async function getAniListPopular(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
-  const localizedResults = await withRussianTitles(results, "", page);
+  const localizedResults = await withRussianTitles(results);
 
   return {
     page: pageInfo.currentPage,
@@ -296,7 +305,7 @@ export async function getAniListSpotlight(): Promise<MediaList[]> {
 
   const data = await fetchAniListGraphQL(query);
   const results = (data.Page?.media || []) as MediaList[];
-  const localized = await withRussianTitles(results, "", 1);
+  const localized = await withRussianTitles(results);
   return localized.filter((item) => !item.isAdult && item.bannerImage);
 }
 
@@ -382,7 +391,7 @@ export async function getAniListAnimeDetails(animeId: string): Promise<IAnimeDet
 
   const data = await fetchAniListGraphQL(query, { id: parseInt(animeId, 10) });
   const rawMedia = data.Media;
-  const localizedMedia = await withRussianTitles([rawMedia], rawMedia?.title?.english || rawMedia?.title?.romaji || "", 1);
+  const localizedMedia = await withRussianTitles([rawMedia]);
   const media = localizedMedia[0] || rawMedia;
 
   const title =
@@ -816,7 +825,7 @@ export async function getAniListSearchResults(
   const filtered = results.filter((m) => !m.isAdult);
 
   const currentPage = pageInfo?.currentPage || params.page || 1;
-  const localizedResults = await withRussianTitles(filtered, cleanQuery, currentPage);
+  const localizedResults = await withRussianTitles(filtered);
   const hasNextPage = Boolean(pageInfo?.hasNextPage);
 
   let totalPages = 1;
@@ -881,7 +890,7 @@ export async function getAniListSearchSuggestions(
 
   const data = await fetchAniListGraphQL(query, { search: q.trim() });
   const items = data.Page?.media || [];
-  const localizedItems = await withRussianTitles(items, q, 1);
+  const localizedItems = await withRussianTitles(items);
 
   return localizedItems.map((item: any) => ({
     id: String(item.id),
