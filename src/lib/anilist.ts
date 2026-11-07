@@ -87,7 +87,7 @@ export async function fetchAniListGraphQL<T = any>(
 
 type RussianTitleRecord = { malId?: number | string | null; russian?: string | null; rating?: string | null };
 
-async function withRussianTitles<T extends { idMal?: number | null; title?: { english?: string | null; romaji?: string | null; native?: string | null } }>(
+async function withRussianTitles<T>(
   items: T[],
   query = "",
   page = 1,
@@ -107,10 +107,13 @@ async function withRussianTitles<T extends { idMal?: number | null; title?: { en
       if (malId && russian && record.rating !== "rx") titles.set(String(malId), russian);
     }
     return items.map((item) => {
-      const malId = item.idMal;
-      const russian = malId ? titles.get(String(malId)) : undefined;
-      if (!russian || !item.title) return item;
-      return { ...item, title: { ...item.title, english: russian } };
+      const media = item as T & {
+        idMal?: number | null;
+        title?: { english?: string | null; romaji?: string | null; native?: string | null };
+      };
+      const russian = media.idMal ? titles.get(String(media.idMal)) : undefined;
+      if (!russian || !media.title) return item;
+      return { ...media, title: { ...media.title, english: russian } } as T;
     });
   } catch {
     return items;
