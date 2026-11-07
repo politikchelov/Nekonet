@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const titles = records
       .filter((item: any) => item && item.rating !== "rx")
       .map((item: any) => ({
-        malId: item.malId ?? item.mal_id ?? null,
+        malId: item.malId ?? item.mal_id ?? item.myanimelist_id ?? null,
         russian: typeof item.russian === "string" ? item.russian : null,
         rating: item.rating ?? null,
       }))
