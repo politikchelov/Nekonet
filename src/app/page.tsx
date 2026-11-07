@@ -69,22 +69,22 @@ export default function Home() {
         loading={isLoadingPopular || isLoadingRecent}
         featuredAnime={[
           {
-            title: "Most Favorite Anime",
+            title: "Любимое аниме",
             anime: featuredFavoriteList,
           },
           {
-            title: "Most Popular Anime",
+            title: "Популярное аниме",
             anime: featuredPopularList,
           },
           {
-            title: "Recent Completed Anime",
+            title: "Недавно завершённое",
             anime: featuredRecentList,
           },
         ]}
       />
 
       <AnimeSections
-        title="Trending Anime"
+        title="В тренде"
         animeList={trendingList}
         loading={isLoadingTrending}
         page={trendingPage}
@@ -97,7 +97,7 @@ export default function Home() {
       <RecentCommentsSection />
 
       <AnimeSections
-        title="Upcoming Animes"
+        title="Скоро выйдет"
         animeList={upcomingList}
         loading={isLoadingUpcoming}
         page={upcomingPage}
