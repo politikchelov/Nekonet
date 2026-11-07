@@ -94,18 +94,39 @@ async function withRussianTitles<T>(
 ): Promise<T[]> {
   if (!items.length) return items;
   try {
-    const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    params.set("page", String(page));
-    const response = await fetch("/api/shikimori/titles?" + params.toString(), { cache: "force-cache" });
+    // This function runs server-side: relative /api URLs cannot be resolved by fetch.
+    // Query Shikimori directly so the title lookup works in server-rendered catalog data.
+    const params = new URLSearchParams({
+      limit: "50",
+      page: String(page),
+      censored: "true",
+    });
+    if (query.trim()) params.set("search", query.trim());
+    else params.set("order", "popularity");
+
+    const response = await fetch("https://shikimori.one/api/animes?" + params.toString(), {
+      headers: { Accept: "application/json", "User-Agent": "Miraku/1.0 (anime catalog)" },
+      next: { revalidate: 21600 },
+      signal: AbortSignal.timeout(7000),
+    });
     if (!response.ok) return items;
-    const records = (await response.json()) as RussianTitleRecord[];
+
+    const payload: unknown = await response.json();
+    const records: RussianTitleRecord[] = (Array.isArray(payload) ? payload : [])
+      .filter((record: any) => record && record.rating !== "rx")
+      .map((record: any) => ({
+        malId: record.malId ?? record.mal_id ?? null,
+        russian: typeof record.russian === "string" ? record.russian : null,
+        rating: record.rating ?? null,
+      }));
+
     const titles = new Map<string, string>();
     for (const record of records) {
       const malId = record.malId;
       const russian = record.russian?.trim();
       if (malId && russian && record.rating !== "rx") titles.set(String(malId), russian);
     }
+
     return items.map((item) => {
       const media = item as T & {
         idMal?: number | null;
