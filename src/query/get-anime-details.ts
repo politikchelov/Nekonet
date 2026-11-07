@@ -1,6 +1,6 @@
 import { GET_ANIME_DETAILS } from "@/constants/query-keys";
 import { api } from "@/lib/api";
-import { getAniListAnimeDetails } from "@/lib/anilist";
+import { getAniListAnimeDetails, withRussianTitles } from "@/lib/anilist";
 import { IAnimeDetails } from "@/types/anime-details";
 import { MediaFull } from "@/types/miruro-api";
 import { useQuery } from "react-query";
@@ -9,7 +9,8 @@ const getAnimeDetails = async (animeId: string): Promise<IAnimeDetails> => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     try {
       const res = await api.get<MediaFull>(`/info/${animeId}`);
-      const media = res.data;
+      const localized = await withRussianTitles([res.data]);
+      const media = localized[0] || res.data;
 
       if (media && media.id) {
         const title =
