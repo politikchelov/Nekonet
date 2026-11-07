@@ -237,7 +237,7 @@ export default function AniVibePlayer({ animeTitle, initialEpisode = 1 }: Props)
               ))}
             </select>
           </label>
-          <Button type="button" onClick={() => void createPlayer()} disabled={loading || !episodeNumbers.has(episode)} className="gap-2">
+          <Button type="button" onClick={() => void createPlayer()} disabled={loading || (episodes.length > 0 && !episodeNumbers.has(episode))} className="gap-2">
             <Play className="h-4 w-4" /> Запустить
           </Button>
         </div>
