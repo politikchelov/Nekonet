@@ -17,20 +17,20 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
-const APP_NAME = "NekoNet";
-const APP_DEFAULT_TITLE = "NekoNet — смотреть аниме онлайн";
+const APP_NAME = "Miraku";
+const APP_DEFAULT_TITLE = "Miraku — смотреть аниме онлайн";
 const APP_DESCRIPTION =
-  "Смотрите любимое аниме онлайн на NekoNet.";
+  "Смотрите любимое аниме онлайн на Miraku.";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
   title: {
     default: APP_DEFAULT_TITLE,
-    template: "%s | NekoNet",
+    template: "%s | Miraku",
   },
   description: APP_DESCRIPTION,
   icons: {
-    icon: "/miru-logo.svg",
+    icon: "/miraku-logo.svg",
     apple: "/icon-192x192.png",
   },
   appleWebApp: {
