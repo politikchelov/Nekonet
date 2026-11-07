@@ -27,7 +27,7 @@ const WatchButton = () => {
       className="max-w-fit text-base"
       LeftIcon={CirclePlay}
     >
-      {hasWatchedAnime ? "Continue Watching" : "Start Watching"}
+      {hasWatchedAnime ? "Продолжить просмотр" : "Смотреть"}
     </ButtonLink>
   );
 };

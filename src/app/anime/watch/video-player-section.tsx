@@ -269,7 +269,7 @@ const VideoPlayerSection = () => {
   const currentProviderName = cleanParts[1] || providerNames[0] || "kiwi";
   const activeCategory = cleanParts[3] === "dub" ? "dub" : preferredCategory;
 
-  if (!activeEpisodeId || isLoadingData) {
+  if (!useAniVibe && (!activeEpisodeId || isLoadingData)) {
     return (
       <div className="h-auto aspect-video lg:max-h-[calc(100vh-150px)] min-h-[20vh] sm:min-h-[30vh] md:min-h-[40vh] lg:min-h-[60vh] w-full animate-pulse bg-slate-800 rounded-xl"></div>
     );

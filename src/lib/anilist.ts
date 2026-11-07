@@ -83,6 +83,40 @@ export async function fetchAniListGraphQL<T = any>(
   return json.data;
 }
 
+
+
+type RussianTitleRecord = { malId?: number | string | null; russian?: string | null; rating?: string | null };
+
+async function withRussianTitles<T extends { idMal?: number | null; title?: { english?: string | null; romaji?: string | null; native?: string | null } }>(
+  items: T[],
+  query = "",
+  page = 1,
+): Promise<T[]> {
+  if (!items.length) return items;
+  try {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    params.set("page", String(page));
+    const response = await fetch("/api/shikimori/titles?" + params.toString(), { cache: "force-cache" });
+    if (!response.ok) return items;
+    const records = (await response.json()) as RussianTitleRecord[];
+    const titles = new Map<string, string>();
+    for (const record of records) {
+      const malId = record.malId;
+      const russian = record.russian?.trim();
+      if (malId && russian && record.rating !== "rx") titles.set(String(malId), russian);
+    }
+    return items.map((item) => {
+      const malId = item.idMal;
+      const russian = malId ? titles.get(String(malId)) : undefined;
+      if (!russian || !item.title) return item;
+      return { ...item, title: { ...item.title, english: russian } };
+    });
+  } catch {
+    return items;
+  }
+}
+
 export async function getAniListPopular(
   page: number = 1,
   perPage: number = 20,
@@ -107,13 +141,14 @@ export async function getAniListPopular(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
+  const localizedResults = await withRussianTitles(results, "", page);
 
   return {
     page: pageInfo.currentPage,
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: results.filter((item: MediaList) => !item.isAdult),
+    results: localizedResults.filter((item: MediaList) => !item.isAdult),
   };
 }
 
@@ -141,13 +176,14 @@ export async function getAniListTrending(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
+  const localizedResults = await withRussianTitles(results, "", page);
 
   return {
     page: pageInfo.currentPage,
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: results.filter((item: MediaList) => !item.isAdult),
+    results: localizedResults.filter((item: MediaList) => !item.isAdult),
   };
 }
 
@@ -175,13 +211,14 @@ export async function getAniListUpcoming(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
+  const localizedResults = await withRussianTitles(results, "", page);
 
   return {
     page: pageInfo.currentPage,
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: results.filter((item: MediaList) => !item.isAdult),
+    results: localizedResults.filter((item: MediaList) => !item.isAdult),
   };
 }
 
@@ -209,13 +246,14 @@ export async function getAniListRecent(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
+  const localizedResults = await withRussianTitles(results, "", page);
 
   return {
     page: pageInfo.currentPage,
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: results.filter((item: MediaList) => !item.isAdult),
+    results: localizedResults.filter((item: MediaList) => !item.isAdult),
   };
 }
 
@@ -232,7 +270,8 @@ export async function getAniListSpotlight(): Promise<MediaList[]> {
 
   const data = await fetchAniListGraphQL(query);
   const results = (data.Page?.media || []) as MediaList[];
-  return results.filter((item) => !item.isAdult && item.bannerImage);
+  const localized = await withRussianTitles(results, "", 1);
+  return localized.filter((item) => !item.isAdult && item.bannerImage);
 }
 
 export async function getAniListAnimeDetails(animeId: string): Promise<IAnimeDetails> {
@@ -316,7 +355,9 @@ export async function getAniListAnimeDetails(animeId: string): Promise<IAnimeDet
   `;
 
   const data = await fetchAniListGraphQL(query, { id: parseInt(animeId, 10) });
-  const media = data.Media;
+  const rawMedia = data.Media;
+  const localizedMedia = await withRussianTitles([rawMedia], rawMedia?.title?.english || rawMedia?.title?.romaji || "", 1);
+  const media = localizedMedia[0] || rawMedia;
 
   const title =
     media.title?.english || media.title?.romaji || media.title?.native || "Untitled";
@@ -749,6 +790,7 @@ export async function getAniListSearchResults(
   const filtered = results.filter((m) => !m.isAdult);
 
   const currentPage = pageInfo?.currentPage || params.page || 1;
+  const localizedResults = await withRussianTitles(filtered, cleanQuery, currentPage);
   const hasNextPage = Boolean(pageInfo?.hasNextPage);
 
   let totalPages = 1;
@@ -763,7 +805,7 @@ export async function getAniListSearchResults(
   }
 
   return {
-    animes: filtered.map((m) => ({
+    animes: localizedResults.map((m) => ({
       id: String(m.id),
       name: m.title?.english || m.title?.romaji || m.title?.native || "Untitled",
       jname: m.title?.native || m.title?.romaji || "",
@@ -812,8 +854,9 @@ export async function getAniListSearchSuggestions(
 
   const data = await fetchAniListGraphQL(query, { search: q.trim() });
   const items = data.Page?.media || [];
+  const localizedItems = await withRussianTitles(items, q, 1);
 
-  return items.map((item: any) => ({
+  return localizedItems.map((item: any) => ({
     id: String(item.id),
     name: item.title?.english || item.title?.romaji || item.title?.native || "Untitled",
     jname: item.title?.romaji || "",

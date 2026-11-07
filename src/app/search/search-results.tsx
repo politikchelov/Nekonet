@@ -131,43 +131,43 @@ const SearchResults = () => {
         <div className="flex flex-wrap gap-3">
           <Select
             options={types}
-            placeholder="Type"
+            placeholder="Тип"
             value={filters.type}
             onChange={(val) => onChange("type", val)}
           />
           <Select
             options={statuses}
-            placeholder="Status"
+            placeholder="Статус"
             value={filters.status}
             onChange={(val) => onChange("status", val)}
           />
           <Select
             options={ratings}
-            placeholder="Rated"
+            placeholder="Возрастной рейтинг"
             value={filters.rated}
             onChange={(val) => onChange("rated", val)}
           />
           <Select
             options={seasons}
-            placeholder="Season"
+            placeholder="Сезон"
             value={filters.season}
             onChange={(val) => onChange("season", val)}
           />
           <Select
             options={languages}
-            placeholder="Language"
+            placeholder="Озвучка"
             value={filters.language}
             onChange={(val) => onChange("language", val)}
           />
           <Select
             options={sort}
-            placeholder="Sort"
+            placeholder="Сортировка"
             value={filters.sort}
             onChange={(val) => onChange("sort", val)}
           />
         </div>
         <div>
-          <p className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Genres</p>
+          <p className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Жанры</p>
           <ToggleGroup
             type="multiple"
             className="flex flex-wrap justify-start gap-2"
@@ -215,10 +215,10 @@ const SearchResults = () => {
       <div className="flex items-center gap-2.5 text-2xl font-bold text-white">
         <span className="w-1.5 h-6 rounded-full bg-gradient-to-b from-cyan-400 to-blue-600 shadow-sm shadow-cyan-500/50" />
         {displayPhrase === "" ? (
-          "Catalog Results"
+          "Каталог"
         ) : (
           <>
-            Results for <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">&quot;{displayPhrase}&quot;</span>
+            Результаты по запросу <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">&quot;{displayPhrase}&quot;</span>
           </>
         )}
       </div>
@@ -250,9 +250,9 @@ const SearchResults = () => {
       </div>
       {!isLoading && searchResults && searchResults.animes.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3 w-full">
-          <p className="text-xl font-bold text-white">No results found</p>
+          <p className="text-xl font-bold text-white">Ничего не найдено</p>
           <p className="text-sm text-slate-400">
-            Try adjusting your search query or removing some filters.
+            Попробуй изменить запрос или убрать часть фильтров.
           </p>
         </div>
       )}
