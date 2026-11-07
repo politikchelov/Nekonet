@@ -4,13 +4,13 @@
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
-  "name": "Miru - Stream Anime with No Ads",
-  "short_name": "Miru",
-  "description": "Watch your favorite anime anywhere, anytime with ease and no ads on Miru",
+  "name": "Miraku — аниме онлайн",
+  "short_name": "Miraku",
+  "description": "Смотрите любимое аниме онлайн на Miraku",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/miru-logo.svg",
+      "src": "/miraku-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     },
