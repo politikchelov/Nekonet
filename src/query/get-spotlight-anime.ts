@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { withRussianTitles } from "@/lib/anilist";
 import { getAniListSpotlight } from "@/lib/anilist";
 import { MediaList } from "@/types/miruro-api";
 import { useQuery } from "react-query";
@@ -11,7 +12,7 @@ const getSpotlightAnime = async (): Promise<MediaList[]> => {
       const res = await api.get<{ results: MediaList[] }>("/spotlight");
       const list = res.data?.results || [];
       if (list.length > 0) {
-        return list.filter((item) => !item.isAdult);
+        return withRussianTitles(list.filter((item) => !item.isAdult));
       }
     } catch {
       // Fallback to AniList
