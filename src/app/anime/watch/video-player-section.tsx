@@ -18,6 +18,7 @@ import { useGetAllEpisodes } from "@/query/get-all-episodes";
 
 import useBookMarks from "@/hooks/use-get-bookmark";
 import { useGetSourceAvailable } from "@/query/get-source-available";
+import AniVibePlayer from "@/components/anivibe-player";
 
 const VideoPlayerSection = () => {
   const searchParams = useSearchParams();
@@ -52,6 +53,7 @@ const VideoPlayerSection = () => {
   const isPrimaryDisabled = isSourceAvailable === false;
 
   const [useFallback, setUseFallback] = useState<boolean>(false);
+  const [useAniVibe, setUseAniVibe] = useState<boolean>(true);
   const [fallbackServer, setFallbackServer] = useState<"megaplay" | "vidlink" | "autoembed">("megaplay");
 
   const { data: episodeData, isLoading: isLoadingData } =
@@ -389,7 +391,22 @@ const VideoPlayerSection = () => {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant={useAniVibe ? "default" : "outline"} onClick={() => setUseAniVibe(true)} className="rounded-xl">
+          AniVibe
+        </Button>
+        <Button size="sm" variant={!useAniVibe ? "default" : "outline"} onClick={() => setUseAniVibe(false)} className="rounded-xl">
+          Miru Player
+        </Button>
+      </div>
+      {useAniVibe ? (
+        <AniVibePlayer
+          animeTitle={anime?.anime?.info?.name || ""}
+          initialEpisode={Number(currentEpNumber) || 1}
+        />
+      ) : (
+      <>
       <MiruPlayer
         key={episodeData.sources?.[0]?.url}
         episodeInfo={episodeData}
@@ -486,6 +503,8 @@ const VideoPlayerSection = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
