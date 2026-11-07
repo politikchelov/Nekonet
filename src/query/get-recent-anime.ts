@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { withRussianTitles } from "@/lib/anilist";
 import { getAniListRecent } from "@/lib/anilist";
 import { MediaList, PaginatedResponse } from "@/types/miruro-api";
 import { useQuery } from "react-query";
@@ -18,7 +19,7 @@ const getRecentAnime = async (
       if (data && data.results) {
         return {
           ...data,
-          results: (data.results || []).filter((item) => !item.isAdult),
+          results: await withRussianTitles((data.results || []).filter((item) => !item.isAdult)),
         };
       }
     } catch {
