@@ -835,6 +835,7 @@ export async function getAniListSearchSuggestions(
       Page(page: 1, perPage: 8) {
         media(search: $search, type: ANIME, isAdult: false) {
           id
+          idMal
           title {
             english
             romaji
