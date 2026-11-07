@@ -81,7 +81,7 @@ const ContinueWatching = (props: Props) => {
         <div className="flex items-center gap-2">
           <History className="h-5 w-5 text-cyan-400" />
           <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            Continue Watching
+            Продолжить просмотр
           </h2>
         </div>
       </div>
