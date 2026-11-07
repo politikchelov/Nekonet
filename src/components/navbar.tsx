@@ -79,8 +79,8 @@ const NavBar = () => {
           className="flex items-center gap-3 cursor-pointer group"
         >
           <Image
-            src="/miru-logo.svg"
-            alt="Логотип NekoNet"
+            src="/miraku-logo.svg"
+            alt="Логотип Miraku"
             width={40}
             height={40}
             className="rounded-xl shadow-lg transition-transform group-hover:scale-105"
@@ -91,7 +91,7 @@ const NavBar = () => {
               "text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-500 to-cyan-400 tracking-widest",
             ])}
           >
-            NekoNet
+            Miraku
           </h1>
         </Link>
 
