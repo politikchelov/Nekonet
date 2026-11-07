@@ -14,7 +14,12 @@ const QueryProvider = (props: Props) => {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: false,
+            // Avoid long blank loading periods when an upstream catalog is unavailable.
+            retry: 1,
+            retryDelay: 800,
             staleTime: 1000 * 60 * 5,
+            cacheTime: 1000 * 60 * 15,
+            keepPreviousData: true,
           },
         },
       }),
