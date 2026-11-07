@@ -79,7 +79,7 @@ const AnimeEpisodes = ({ animeId }: Props) => {
         return (
           (index + 1).toString().includes(query) ||
           episode.title.toLowerCase().includes(query) ||
-          "episode".includes(query.trim())
+          "серия".includes(query.trim())
         );
       });
       setEpisodes(filteredEpisodes);
@@ -99,7 +99,7 @@ const AnimeEpisodes = ({ animeId }: Props) => {
               <SelectTrigger className="w-[140px] sm:w-[160px] glass-panel border border-white/10 rounded-xl text-xs font-semibold">
                 <SelectValue
                   className="text-white"
-                  placeholder="Select Range"
+                  placeholder="Выбрать диапазон"
                 />
               </SelectTrigger>
               <SelectContent className="glass-panel border border-white/10 rounded-xl">
@@ -116,7 +116,7 @@ const AnimeEpisodes = ({ animeId }: Props) => {
           <div className="relative flex-1 sm:w-64 max-w-[21.875rem]">
             <Search className="absolute inset-y-0 left-3 m-auto h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search episode..."
+              placeholder="Поиск серии..."
               className="w-full pl-9 text-xs glass-panel border border-white/10 rounded-xl text-white placeholder-slate-400 focus-visible:ring-cyan-400/50"
               onChange={handleSearch}
             />
@@ -134,7 +134,7 @@ const AnimeEpisodes = ({ animeId }: Props) => {
         ))}
         {!episodes.length && !isLoading && (
           <div className="col-span-full flex items-center justify-center py-12 glass-panel rounded-2xl border border-white/10 text-slate-400 text-sm font-medium">
-            No Episodes Available
+            Серии не найдены
           </div>
         )}
         {isLoading &&
