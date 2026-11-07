@@ -94,36 +94,38 @@ async function withRussianTitles<T>(
 ): Promise<T[]> {
   if (!items.length) return items;
   try {
-    // This function runs server-side: relative /api URLs cannot be resolved by fetch.
-    // Query Shikimori directly so the title lookup works in server-rendered catalog data.
-    const params = new URLSearchParams({
-      limit: "50",
-      page: String(page),
-      censored: "true",
-    });
-    if (query.trim()) params.set("search", query.trim());
-    else params.set("order", "popularity");
+    // Shikimori REST does not expose the MAL mapping reliably. Its GraphQL API
+    // provides malId and russian together, so use that pair for exact matching.
+    const safePage = Math.max(1, Math.min(1000, Math.floor(page) || 1));
+    const search = query.trim();
+    const filters = search
+      ? `search: ${JSON.stringify(search)}, limit: 50`
+      : `page: ${safePage}, limit: 50, order: popularity, censored: true`;
+    const gql = `query MirakuRussianTitles { animes(${filters}) { malId russian rating } }`;
 
-    const response = await fetch("https://shikimori.one/api/animes?" + params.toString(), {
-      headers: { Accept: "application/json", "User-Agent": "Miraku/1.0 (anime catalog)" },
+    const response = await fetch("https://shikimori.one/api/graphql", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": "Miraku/1.0 (anime catalog)",
+      },
+      body: JSON.stringify({ query: gql }),
       next: { revalidate: 21600 },
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(9000),
     });
     if (!response.ok) return items;
 
-    const payload: unknown = await response.json();
-    const records: RussianTitleRecord[] = (Array.isArray(payload) ? payload : [])
-      .filter((record: any) => record && record.rating !== "rx")
-      .map((record: any) => ({
-        malId: record.malId ?? record.mal_id ?? record.myanimelist_id ?? null,
-        russian: typeof record.russian === "string" ? record.russian : null,
-        rating: record.rating ?? null,
-      }));
+    const payload = await response.json();
+    if (payload?.errors?.length) return items;
+    const records: RussianTitleRecord[] = Array.isArray(payload?.data?.animes)
+      ? payload.data.animes
+      : [];
 
     const titles = new Map<string, string>();
     for (const record of records) {
-      const malId = record.malId;
-      const russian = record.russian?.trim();
+      const malId = record?.malId;
+      const russian = record?.russian?.trim();
       if (malId && russian && record.rating !== "rx") titles.set(String(malId), russian);
     }
 
