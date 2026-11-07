@@ -151,7 +151,7 @@ export async function getAniListPopular(
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: localizedResults.filter((item: MediaList) => !item.isAdult),
+    results: (localizedResults as unknown as MediaList[]).filter((item) => !item.isAdult),
   };
 }
 
@@ -186,7 +186,7 @@ export async function getAniListTrending(
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: localizedResults.filter((item: MediaList) => !item.isAdult),
+    results: (localizedResults as unknown as MediaList[]).filter((item) => !item.isAdult),
   };
 }
 
@@ -221,7 +221,7 @@ export async function getAniListUpcoming(
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: localizedResults.filter((item: MediaList) => !item.isAdult),
+    results: (localizedResults as unknown as MediaList[]).filter((item) => !item.isAdult),
   };
 }
 
@@ -256,7 +256,7 @@ export async function getAniListRecent(
     perPage: pageInfo.perPage,
     total: pageInfo.total,
     hasNextPage: pageInfo.hasNextPage,
-    results: localizedResults.filter((item: MediaList) => !item.isAdult),
+    results: (localizedResults as unknown as MediaList[]).filter((item) => !item.isAdult),
   };
 }
 
