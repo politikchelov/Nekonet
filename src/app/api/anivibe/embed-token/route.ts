@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const ANIVIBE_API_URL = "https://anivibe.pro/api/v1";
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { anime_id?: unknown; episode?: unknown; translation?: unknown };
+  let body: { anime_id?: unknown; episode?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -23,24 +24,14 @@ export async function POST(request: NextRequest) {
   }
 
   const animeId = Number(body.anime_id);
-  const episode = body.episode == null ? undefined : Number(body.episode);
+  const episode = Number(body.episode);
 
   if (!Number.isSafeInteger(animeId) || animeId < 1) {
     return NextResponse.json({ error: "anime_id must be a positive integer." }, { status: 400 });
   }
 
-  if (episode !== undefined && (!Number.isSafeInteger(episode) || episode < 1)) {
+  if (!Number.isSafeInteger(episode) || episode < 1) {
     return NextResponse.json({ error: "episode must be a positive integer." }, { status: 400 });
-  }
-
-  const payload: Record<string, string | number> = {
-    anime_id: animeId,
-    origin,
-  };
-
-  if (episode !== undefined) payload.episode = episode;
-  if (typeof body.translation === "string" && body.translation.trim()) {
-    payload.translation = body.translation.trim().slice(0, 100);
   }
 
   try {
@@ -50,7 +41,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         "X-Api-Key": apiKey,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ anime_id: animeId, episode, origin }),
       cache: "no-store",
     });
 
