@@ -54,7 +54,7 @@ const NavBar = () => {
         console.error("Auth refresh error:", e);
         localStorage.removeItem("pocketbase_auth");
         auth.clearAuth();
-        toast.error("Login session expired.", {
+        toast.error("Срок действия сессии истёк.", {
           style: { background: "red" },
         });
       }
@@ -80,7 +80,7 @@ const NavBar = () => {
         >
           <Image
             src="/miru-logo.svg"
-            alt="Miru logo"
+            alt="Логотип NekoNet"
             width={40}
             height={40}
             className="rounded-xl shadow-lg transition-transform group-hover:scale-105"
@@ -91,7 +91,7 @@ const NavBar = () => {
               "text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-500 to-cyan-400 tracking-widest",
             ])}
           >
-            Miru
+            NekoNet
           </h1>
         </Link>
 
