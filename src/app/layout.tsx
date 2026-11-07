@@ -17,16 +17,16 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
-const APP_NAME = "Miru";
-const APP_DEFAULT_TITLE = "Miru - Stream Anime with No Ads";
+const APP_NAME = "NekoNet";
+const APP_DEFAULT_TITLE = "NekoNet — смотреть аниме онлайн";
 const APP_DESCRIPTION =
-  "Watch your favorite anime anywhere, anytime with ease and no ads on Miru.";
+  "Смотрите любимое аниме онлайн на NekoNet.";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
   title: {
     default: APP_DEFAULT_TITLE,
-    template: "%s | Miru",
+    template: "%s | NekoNet",
   },
   description: APP_DESCRIPTION,
   icons: {
@@ -63,7 +63,7 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <head>
         {gaId && (
           <>
