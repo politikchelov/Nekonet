@@ -10,6 +10,18 @@ const getRecentAnime = async (
   page = 1,
   perPage = 20,
 ): Promise<PaginatedResponse<MediaList>> => {
+  try {
+    const shikimori = await fetch(`/api/shikimori/catalog?category=recent&page=${page}&perPage=${perPage}`);
+    if (shikimori.ok) {
+      const catalog = await shikimori.json();
+      if (Array.isArray(catalog.results) && catalog.results.length > 0) {
+        return catalog as PaginatedResponse<MediaList>;
+      }
+    }
+  } catch {
+    // Fall back to the configured catalog if Shikimori is unavailable.
+  }
+
   if (process.env.NEXT_PUBLIC_API_URL) {
     try {
       const res = await api.get<PaginatedResponse<MediaList>>("/recent", {
