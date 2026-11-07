@@ -115,7 +115,7 @@ async function withRussianTitles<T>(
     const records: RussianTitleRecord[] = (Array.isArray(payload) ? payload : [])
       .filter((record: any) => record && record.rating !== "rx")
       .map((record: any) => ({
-        malId: record.malId ?? record.mal_id ?? null,
+        malId: record.malId ?? record.mal_id ?? record.myanimelist_id ?? null,
         russian: typeof record.russian === "string" ? record.russian : null,
         rating: record.rating ?? null,
       }));
