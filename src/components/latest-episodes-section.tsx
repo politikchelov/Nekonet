@@ -19,7 +19,8 @@ const LatestEpisodesAnime = ({ loading: initialLoading }: Props) => {
   const episodesList = data?.results || [];
   const hasNextPage = data?.hasNextPage ?? false;
 
-  if (isLoading || isFetching || initialLoading || !episodesList.length) {
+  // Keep the previous page visible while the next page is fetched.
+  if (isLoading || initialLoading || !episodesList.length) {
     return <LoadingSkeleton />;
   }
 
