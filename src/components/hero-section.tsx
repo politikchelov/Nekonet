@@ -138,7 +138,8 @@ const HeroCanvasItem = ({
       <div
         className={`absolute inset-0 bg-cover bg-center transition-transform duration-1000 ${isActive ? "scale-105" : "scale-100"
           }`}
-        style={{ backgroundImage: `url(${bgImage})` }}
+        // Only fetch the visible slide's large banner; other slides load on demand.
+        style={isActive ? { backgroundImage: `url(${bgImage})` } : undefined}
       />
 
       {/* Atmospheric Overlays */}
