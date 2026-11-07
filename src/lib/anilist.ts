@@ -211,7 +211,7 @@ export async function getAniListTrending(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
-  const localizedResults = await withRussianTitles(results, "", page);
+  const localizedResults = await withRussianTitles(results);
 
   return {
     page: pageInfo.currentPage,
@@ -246,7 +246,7 @@ export async function getAniListUpcoming(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
-  const localizedResults = await withRussianTitles(results, "", page);
+  const localizedResults = await withRussianTitles(results);
 
   return {
     page: pageInfo.currentPage,
@@ -281,7 +281,7 @@ export async function getAniListRecent(
   const data = await fetchAniListGraphQL(query, { page, perPage });
   const pageInfo = data.Page.pageInfo;
   const results = data.Page.media || [];
-  const localizedResults = await withRussianTitles(results, "", page);
+  const localizedResults = await withRussianTitles(results);
 
   return {
     page: pageInfo.currentPage,
