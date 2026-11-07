@@ -32,21 +32,21 @@ const LatestEpisodesAnime = ({ loading: initialLoading }: Props) => {
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-400" />
             <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              Recently Updated
+              Недавно обновлено
             </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400 font-medium mr-1">
-            Page {page}
+            Страница {page}
           </span>
           <Button
             size="icon"
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
             disabled={page <= 1}
             className="h-8 w-8 rounded-lg bg-slate-900 border border-white/10 text-white hover:bg-indigo-600 hover:border-indigo-500 disabled:opacity-30 disabled:hover:bg-slate-900 transition-all"
-            aria-label="Previous page"
+            aria-label="Предыдущая страница"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -55,7 +55,7 @@ const LatestEpisodesAnime = ({ loading: initialLoading }: Props) => {
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasNextPage}
             className="h-8 w-8 rounded-lg bg-slate-900 border border-white/10 text-white hover:bg-indigo-600 hover:border-indigo-500 disabled:opacity-30 disabled:hover:bg-slate-900 transition-all"
-            aria-label="Next page"
+            aria-label="Следующая страница"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
