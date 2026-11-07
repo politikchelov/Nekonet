@@ -27,7 +27,8 @@ export default function Home() {
 
   const { data: spotlightList = [], isLoading: isLoadingSpotlight } =
     useGetSpotlightAnime();
-  const { data: recentRes, isLoading: isLoadingRecent } = useGetRecentAnime();
+  // Match LatestEpisodesAnime's page size so React Query shares one request.
+  const { data: recentRes, isLoading: isLoadingRecent } = useGetRecentAnime(1, 14);
   const { data: popularRes, isLoading: isLoadingPopular } =
     useGetPopularAnime();
   const { data: trendingRes, isLoading: isLoadingTrending } =
