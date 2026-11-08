@@ -6,6 +6,7 @@ import { useGetRecentAnime } from "@/query/get-recent-anime";
 import dynamic from "next/dynamic";
 import React, { useMemo } from "react";
 import RecentCommentsSection from "@/components/recent-comments-section";
+import AnimeSchedule from "@/components/anime-schedule";
 
 const HeroSection = dynamic(() => import("@/components/hero-section"));
 const LatestEpisodesAnime = dynamic(() => import("@/components/latest-episodes-section"));
@@ -28,6 +29,7 @@ export default function Home() {
           { title: "Посмотри это", anime: recentList.slice(6, 12) },
         ]}
       />
+      <AnimeSchedule />
       <RecentCommentsSection />
     </div>
   );
