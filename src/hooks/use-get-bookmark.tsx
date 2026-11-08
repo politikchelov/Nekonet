@@ -1,4 +1,4 @@
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth-store";
 import { useQuery, useQueryClient } from "react-query";
 import { toast } from "sonner";
@@ -14,19 +14,6 @@ type Props = {
   populate?: boolean;
 };
 
-export type Bookmark = {
-  id: string;
-  user: string;
-  animeId: string;
-  thumbnail: string;
-  animeTitle: string;
-  status: string;
-  created: string;
-  expand: {
-    watchHistory: WatchHistory[];
-  };
-};
-
 export type WatchHistory = {
   id: string;
   current: number;
@@ -35,6 +22,55 @@ export type WatchHistory = {
   episodeNumber: number;
   created: string;
 };
+
+export type Bookmark = {
+  id: string;
+  user: string;
+  animeId: string;
+  thumbnail: string;
+  animeTitle: string;
+  status: string;
+  created: string;
+  expand: { watchHistory: WatchHistory[] };
+};
+
+type SupabaseBookmark = {
+  id: string;
+  user_id: string;
+  anime_id: string;
+  anime_title: string;
+  thumbnail: string;
+  status: string;
+  created_at: string;
+  watch_history: {
+    id: string;
+    episode_number: number;
+    episode_id: string | null;
+    current_seconds: number;
+    duration_seconds: number;
+    created_at: string;
+  }[];
+};
+
+const toBookmark = (row: SupabaseBookmark): Bookmark => ({
+  id: row.id,
+  user: row.user_id,
+  animeId: row.anime_id,
+  animeTitle: row.anime_title,
+  thumbnail: row.thumbnail,
+  status: row.status.replaceAll("_", " "),
+  created: row.created_at,
+  expand: {
+    watchHistory: (row.watch_history || []).map((watch) => ({
+      id: watch.id,
+      episodeNumber: watch.episode_number,
+      episodeId: watch.episode_id || undefined,
+      current: watch.current_seconds,
+      timestamp: watch.duration_seconds,
+      created: watch.created_at,
+    })),
+  },
+});
 
 function useBookMarks({
   animeID,
@@ -46,114 +82,78 @@ function useBookMarks({
 }: Props) {
   const { auth } = useAuthStore();
   const queryClient = useQueryClient();
-
   const targetUserId = userId || auth?.id;
-
-  const filterParts = [];
-
-  if (targetUserId) {
-    filterParts.push(`user='${targetUserId}'`);
-  }
-
-  if (animeID) {
-    filterParts.push(`animeId='${animeID}'`);
-  }
-
-  if (status) {
-    filterParts.push(`status='${status}'`);
-  }
-
-  const filters = filterParts.join(" && ");
 
   const { data, isLoading } = useQuery({
     queryKey: [GET_BOOKMARKS_KEY, { animeID, status, page, per_page, userId: targetUserId }],
     queryFn: async () => {
-      const res = await pb
-        .collection<Bookmark>("bookmarks")
-        .getList(page, per_page, {
-          filter: filters,
-          expand: "watchHistory",
-          sort: "-updated",
-          requestKey: null,
-        });
+      const supabase = getSupabaseBrowserClient();
+      let query = supabase
+        .from("bookmarks")
+        .select("id,user_id,anime_id,anime_title,thumbnail,status,created_at,watch_history(id,episode_number,episode_id,current_seconds,duration_seconds,created_at)", { count: "exact" })
+        .eq("user_id", targetUserId!)
+        .order("updated_at", { ascending: false });
 
+      if (animeID) query = query.eq("anime_id", animeID);
+      if (status) query = query.eq("status", status.replaceAll(" ", "_"));
+      const from = (page - 1) * per_page;
+      const { data: rows, error, count } = await query.range(from, from + per_page - 1);
+      if (error) throw error;
       return {
-        bookmarks: res.items.length > 0 ? res.items : null,
-        totalPages: res.totalPages,
+        bookmarks: (rows as unknown as SupabaseBookmark[]).map(toBookmark),
+        totalPages: Math.ceil((count || 0) / per_page),
       };
     },
-    enabled: populate && !!auth,
-    staleTime: 1000 * 60 * 5, // Cache results for 5 minutes
-    refetchOnWindowFocus: false, // Prevent refetching when switching tabs
+    enabled: populate && !!targetUserId,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
-
-  const bookmarks = data?.bookmarks ?? null;
-  const totalPages = data?.totalPages ?? 0;
 
   const createOrUpdateBookMark = async (
     animeID: string,
     animeTitle: string,
     animeThumbnail: string,
     status: string,
-    showToast: boolean = true,
+    showToast = true,
   ): Promise<string | null> => {
-    if (!auth) {
-      return null;
-    }
+    if (!auth) return null;
     try {
-      const res = await pb.collection<Bookmark>("bookmarks").getList(1, 1, {
-        filter: `animeId='${animeID}'`,
-        requestKey: null,
-      });
+      const supabase = getSupabaseBrowserClient();
+      const normalizedStatus = status.replaceAll(" ", "_");
+      const { data: existing, error: lookupError } = await supabase
+        .from("bookmarks")
+        .select("id,status")
+        .eq("user_id", auth.id)
+        .eq("anime_id", animeID)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
 
-      let bookmarkId: string;
-
-      if (res.totalItems > 0) {
-        if (res.items[0].status === status) {
-          if (showToast) {
-            toast.error("Already in this status", {
-              style: { background: "red" },
-            });
-          }
-          return res.items[0].id;
-        }
-
-        const updated = await pb
-          .collection("bookmarks")
-          .update(res.items[0].id, {
-            status: status,
-          });
-
-        if (showToast) {
-          toast.success("Successfully updated status", {
-            style: { background: "green" },
-          });
-        }
-
-        bookmarkId = updated.id;
-      } else {
-        const created = await pb.collection<Bookmark>("bookmarks").create({
-          user: auth.id,
-          animeId: animeID,
-          animeTitle: animeTitle,
-          thumbnail: animeThumbnail,
-          status: status,
-        });
-
-        if (showToast) {
-          toast.success("Successfully added to list", {
-            style: { background: "green" },
-          });
-        }
-
-        bookmarkId = created.id;
+      if (existing?.status === normalizedStatus) {
+        if (showToast) toast.error("Already in this status");
+        return existing.id;
       }
 
-      // Invalidate bookmark queries so React Query updates smoothly
+      const { data: saved, error } = await supabase
+        .from("bookmarks")
+        .upsert({
+          ...(existing?.id ? { id: existing.id } : {}),
+          user_id: auth.id,
+          anime_id: animeID,
+          anime_title: animeTitle,
+          thumbnail: animeThumbnail || "",
+          status: normalizedStatus,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,anime_id" })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      if (showToast) toast.success(existing ? "Successfully updated status" : "Successfully added to list");
       queryClient.invalidateQueries(GET_BOOKMARKS_KEY);
-      return bookmarkId;
+      return saved.id;
     } catch (error) {
-      console.log(error);
+      console.error("Bookmark save failed:", error);
+      if (showToast) toast.error("Could not save anime to your list");
       return null;
     }
   };
@@ -161,81 +161,40 @@ function useBookMarks({
   const syncWatchProgress = async (
     bookmarkId: string | null,
     watchedRecordId: string | null,
-    episodeData: {
-      episodeId?: string;
-      episodeNumber: number;
-      current: number;
-      duration: number;
-    },
+    episodeData: { episodeId?: string; episodeNumber: number; current: number; duration: number },
   ): Promise<string | null> => {
-    if (!pb.authStore.isValid || !bookmarkId) return watchedRecordId;
-
-    const dataToSave: Record<string, any> = {
-      episodeNumber: episodeData.episodeNumber,
-      current: Math.round(episodeData.current),
-      timestamp: Math.round(episodeData.duration),
-    };
-
-    if (episodeData.episodeId) {
-      dataToSave.episodeId = episodeData.episodeId;
-    }
-
+    if (!auth || !bookmarkId) return watchedRecordId;
     try {
-      let targetRecordId: string | null = watchedRecordId;
-
-      // Deduplication: If no in-memory record ID, check if a watched record for this episode already exists in PocketBase
-      if (!targetRecordId) {
-        try {
-          const bookmarkRecord = await pb.collection<Bookmark>("bookmarks").getOne(bookmarkId, {
-            expand: "watchHistory",
-            requestKey: null,
-          });
-          const existingHistory = bookmarkRecord.expand?.watchHistory || [];
-          const existingEpRecord = existingHistory.find(
-            (w) => w.episodeNumber === episodeData.episodeNumber
-          );
-          if (existingEpRecord) {
-            targetRecordId = existingEpRecord.id;
-          }
-        } catch (e) {
-          console.warn("Could not check existing watch history:", e);
-        }
-      }
-
-      if (targetRecordId) {
-        await pb.collection("watched").update(targetRecordId, dataToSave);
-        queryClient.invalidateQueries(GET_BOOKMARKS_KEY);
-        return targetRecordId;
-      } else {
-        const newWatchedRecord = await pb
-          .collection("watched")
-          .create(dataToSave);
-
-        try {
-          await pb.collection("bookmarks").update(bookmarkId, {
-            "watchHistory+": newWatchedRecord.id,
-          });
-          queryClient.invalidateQueries(GET_BOOKMARKS_KEY);
-          return newWatchedRecord.id;
-        } catch (error) {
-          console.error(
-            "Error updating bookmark with new watch record:",
-            error,
-          );
-          return null;
-        }
-      }
+      const supabase = getSupabaseBrowserClient();
+      const payload = {
+        ...(watchedRecordId ? { id: watchedRecordId } : {}),
+        bookmark_id: bookmarkId,
+        user_id: auth.id,
+        episode_number: episodeData.episodeNumber,
+        episode_id: episodeData.episodeId || null,
+        current_seconds: Math.round(episodeData.current),
+        duration_seconds: Math.round(episodeData.duration),
+        updated_at: new Date().toISOString(),
+      };
+      const { data: saved, error } = await supabase
+        .from("watch_history")
+        .upsert(payload, { onConflict: "bookmark_id,episode_number" })
+        .select("id")
+        .single();
+      if (error) throw error;
+      queryClient.invalidateQueries(GET_BOOKMARKS_KEY);
+      return saved.id;
     } catch (error) {
-      console.error("Error syncing watch progress:", error);
+      console.error("Watch progress sync failed:", error);
       return watchedRecordId;
     }
   };
 
   return {
-    bookmarks,
+    bookmarks: data?.bookmarks?.length ? data.bookmarks : null,
     syncWatchProgress,
     createOrUpdateBookMark,
-    totalPages,
+    totalPages: data?.totalPages ?? 0,
     isLoading,
   };
 }
