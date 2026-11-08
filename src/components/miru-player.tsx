@@ -19,7 +19,7 @@ import artplayerPluginAmbilight from "artplayer-plugin-ambilight";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import useBookMarks from "@/hooks/use-get-bookmark";
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import Image from "next/image";
 
 const WATCH_PROGRESS_UPDATE_INTERVAL = 10000; // Update every 10 seconds
@@ -146,27 +146,26 @@ function MiruPlayer({
       // Now find the specific watched record ID for THIS episode
       // Fetch again with expand (or use initial list if sufficient)
       try {
-        const expandedBookmark = await pb.collection("bookmarks").getOne(id, {
-          expand: "watchHistory",
-        });
+        const { data: history, error } = await getSupabaseBrowserClient()
+          .from("watch_history")
+          .select("id,episode_number,episode_id,current_seconds")
+          .eq("bookmark_id", id);
+        if (error) throw error;
 
         if (!isMounted) return;
 
-        const history = expandedBookmark.expand?.watchHistory as
-          | any[]
-          | undefined;
         const currentEpNo = parseInt(serversData.episodeNo);
         const existingWatched = history?.find(
           (watched: any) =>
-            (currentEpNo && Number(watched.episodeNumber) === currentEpNo) ||
-            (watched.episodeId && watched.episodeId === serversData.episodeId),
+            (currentEpNo && Number(watched.episode_number) === currentEpNo) ||
+            (watched.episode_id && watched.episode_id === serversData.episodeId),
         );
 
         if (existingWatched) {
           watchedRecordIdRef.current = existingWatched.id;
           initialSeekTimeRef.current =
-            typeof existingWatched.current === "number"
-              ? existingWatched.current
+            typeof existingWatched.current_seconds === "number"
+              ? existingWatched.current_seconds
               : null;
           hasMetMinWatchTimeRef.current =
             initialSeekTimeRef.current !== null &&
