@@ -9,10 +9,10 @@ const searchAnime = async (q: string): Promise<ISuggestionAnime[]> => {
   const response = await fetch("/api/anivibe/search?q=" + encodeURIComponent(term), { cache: "no-store" });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error || "Поиск AniVibe временно недоступен.");
-  return extractAniVibeItems(payload).map((item) => {
+  return extractAniVibeItems(payload).flatMap((item): ISuggestionAnime[] => {
     const media = mapAniVibeMedia(item);
-    if (!media) return null;
-    return {
+    if (!media) return [];
+    return [{
       id: String(media.id),
       name: media.title.romaji,
       jname: media.title.native || "",
@@ -20,8 +20,8 @@ const searchAnime = async (q: string): Promise<ISuggestionAnime[]> => {
       episodes: { sub: media.episodes || 0, dub: media.episodes || 0 },
       type: media.format as any,
       moreInfo: [media.seasonYear ? String(media.seasonYear) : "", media.format].filter(Boolean),
-    };
-  }).filter((item): item is ISuggestionAnime => !!item).slice(0, 8);
+    }];
+  }).slice(0, 8);
 };
 
 export const useSearchAnime = (query: string) =>
