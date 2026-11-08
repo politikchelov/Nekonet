@@ -59,24 +59,9 @@ function LoginPopoverButton() {
     setLoading(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      let email = formData.username.trim();
-
+      const email = formData.username.trim();
       if (!email.includes("@")) {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("id")
-          .ilike("username", email)
-          .maybeSingle();
-
-        if (error || !profile) {
-          throw new Error("Invalid username or password");
-        }
-
-        const { data: account, error: accountError } = await supabase.auth.admin;
-        void data;
-        void account;
-        void accountError;
-        throw new Error("Вход по имени пользователя пока недоступен. Используйте email.");
+        throw new Error("Введите email, использованный при регистрации.");
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
