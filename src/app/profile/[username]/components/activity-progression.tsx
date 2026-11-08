@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth-store";
 import styles from "../heatmap.module.css";
 import { Tooltip } from "react-tooltip";
-import { Bookmark, WatchHistory } from "@/hooks/use-get-bookmark";
+import { WatchHistory } from "@/hooks/use-get-bookmark";
 import { Tv, Sparkles, Calendar, Clock, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
