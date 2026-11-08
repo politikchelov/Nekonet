@@ -21,7 +21,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import NavbarAvatar from "./navbar-avatar";
 import { toast } from "sonner";
 
-const menuItems: Array<{ title: string; href?: string }> = [];
+const menuItems: Array<{ title: string; href?: string }> = [{ title: "Форум", href: "/forum" }];
 
 const NavBar = () => {
   const auth = useAuthStore();
