@@ -18,7 +18,7 @@ const searchAnime = async (q: string): Promise<ISuggestionAnime[]> => {
       jname: media.title.native || "",
       poster: media.coverImage.extraLarge || media.coverImage.large,
       episodes: { sub: media.episodes || 0, dub: media.episodes || 0 },
-      type: media.format,
+      type: media.format as any,
       moreInfo: [media.seasonYear ? String(media.seasonYear) : "", media.format].filter(Boolean),
     };
   }).filter((item): item is ISuggestionAnime => !!item).slice(0, 8);
