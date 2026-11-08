@@ -115,7 +115,7 @@ export const mapAniVibeMedia = (raw: AnyRecord): MediaList | null => {
   };
 };
 
-export const mapAniVibeList = (payload: unknown, page = 1, perPage = 20): PaginatedResponse<MediaList> => {
+export const getAniVibeNextCursor = (payload: unknown): string => {\n  const root = record(payload) || {};\n  const meta = record(root.pagination) || record(root.meta) || {};\n  return str(first(root, ["next_cursor", "nextCursor", "continue_cursor", "continueCursor"]) ?? first(meta, ["next_cursor", "nextCursor", "next"]));\n};\n\nexport const mapAniVibeList = (payload: unknown, page = 1, perPage = 20): PaginatedResponse<MediaList> => {
   const root = record(payload) || {};
   const results = extractAniVibeItems(payload).map(mapAniVibeMedia).filter((item): item is MediaList => !!item);
   const cursor = first(root, ["next_cursor", "nextCursor", "continue_cursor", "continueCursor"]);
