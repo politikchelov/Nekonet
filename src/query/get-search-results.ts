@@ -17,7 +17,7 @@ const searchAnime = async (query: string, page = 1): Promise<IAnimeSearch> => {
       jname: media.title.native || "",
       poster: media.coverImage.extraLarge || media.coverImage.large,
       episodes: { sub: media.episodes || 0, dub: media.episodes || 0 },
-      type: media.format,
+      type: media.format as any,
     })),
     totalPages: 1,
     hasNextPage: false,
