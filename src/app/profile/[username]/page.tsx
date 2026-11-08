@@ -151,7 +151,7 @@ function ProfilePage() {
 
       queryClient.setQueryData<TargetProfileUser>(
         ["PUBLIC_PROFILE_USER", username],
-        (current) => current ? { ...current, bannerUrl: publicUrl.publicUrl } : current,
+        { ...targetUser, bannerUrl: publicUrl.publicUrl },
       );
       toast.success("Profile background updated.");
     } catch (err: any) {
@@ -173,7 +173,7 @@ function ProfilePage() {
 
       queryClient.setQueryData<TargetProfileUser>(
         ["PUBLIC_PROFILE_USER", username],
-        (current) => current ? { ...current, bannerUrl: "" } : current,
+        { ...targetUser, bannerUrl: "" },
       );
       toast.success("Profile background removed.");
     } catch (err: any) {
