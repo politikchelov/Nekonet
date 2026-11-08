@@ -124,8 +124,7 @@ export const useAddComment = () => {
   const queryClient = useQueryClient();
   const { auth } = useAuthStore();
 
-  return useMutation({
-    mutationFn: async (input: AddCommentInput) => {
+  return useMutation(async (input: AddCommentInput) => {
       if (!auth) throw new Error("You must be logged in to comment.");
       const { data, error } = await getSupabaseBrowserClient()
         .from("comments")
@@ -141,7 +140,7 @@ export const useAddComment = () => {
         .single();
       if (error) throw error;
       return data;
-    },
+    }, {
     onSuccess: () => {
       toast.success("Comment posted successfully!");
       queryClient.invalidateQueries(GET_COMMENTS_KEY);
