@@ -599,6 +599,12 @@ export async function getAniListAnimeSchedule(
   });
 
   const schedules = data.Page?.airingSchedules || [];
+  const localizedMedia = await withRussianTitles(
+    schedules.map((item: any) => item.media).filter(Boolean),
+  );
+  const localizedById = new Map(
+    localizedMedia.map((media: any) => [media.id, media]),
+  );
   const nowMs = Date.now();
 
   const scheduledAnimes = schedules.map((item: any) => {
@@ -614,7 +620,7 @@ export async function getAniListAnimeSchedule(
       timeString = "Aired";
     }
 
-    const m = item.media;
+    const m = localizedById.get(item.media?.id) || item.media;
     return {
       id: String(m?.id || item.id),
       name: m?.title?.english || m?.title?.romaji || m?.title?.native || "Untitled",
