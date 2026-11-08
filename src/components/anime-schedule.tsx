@@ -93,6 +93,7 @@ function AnimeSchedule() {
                     {dateObj.toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
+                     
                     })}
                   </span>
                 </div>
@@ -122,7 +123,7 @@ function AnimeSchedule() {
                         ).toLocaleTimeString("en-US", {
                           hour: "numeric",
                           minute: "2-digit",
-                          hour12: true,
+                          hour12: false,
                         });
 
                         return (
