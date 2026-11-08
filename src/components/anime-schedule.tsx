@@ -164,7 +164,7 @@ function AnimeSchedule() {
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
                                   Ep {anime.episode}
                                 </span>
-                                <Link href={`${ROUTES.ANIME_DETAILS}/${anime.id}`}>
+                                <Link href={`/search?q=${encodeURIComponent(anime.name)}`}>
                                   <Button
                                     size="sm"
                                     className="h-7 text-xs bg-slate-800 hover:bg-indigo-600 text-white px-3 rounded-lg flex items-center gap-1.5 transition-all duration-200 font-semibold"
