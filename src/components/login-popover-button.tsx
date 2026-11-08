@@ -4,7 +4,7 @@ import Button from "./common/custom-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Input } from "./ui/input";
 import DiscordIcon from "@/icons/discord";
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -24,115 +24,136 @@ function LoginPopoverButton() {
     confirm_password: "",
   });
   const [tabValue, setTabValue] = useState<"login" | "signup">("login");
+  const [loading, setLoading] = useState(false);
+
+  const loadProfile = async (userId: string, email = "") => {
+    const supabase = getSupabaseBrowserClient();
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url, auto_skip, created_at")
+      .eq("id", userId)
+      .single();
+
+    if (error || !profile) {
+      throw error || new Error("Profile not found");
+    }
+
+    auth.setAuth({
+      id: profile.id,
+      email,
+      username: profile.username,
+      avatar: profile.avatar_url || "",
+      collectionId: "",
+      collectionName: "profiles",
+      autoSkip: !!profile.auto_skip,
+      created: profile.created_at,
+    });
+  };
 
   const loginWithEmail = async () => {
+    if (!formData.username.trim() || !formData.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (formData.username === "" || formData.password === "") {
-        toast.error("Please fill in all fields", {
-          style: { background: "red" },
-        });
-        return;
+      const supabase = getSupabaseBrowserClient();
+      let email = formData.username.trim();
+
+      if (!email.includes("@")) {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("username", email)
+          .maybeSingle();
+
+        if (error || !profile) {
+          throw new Error("Invalid username or password");
+        }
+
+        const { data: account, error: accountError } = await supabase.auth.admin;
+        void data;
+        void account;
+        void accountError;
+        throw new Error("Вход по имени пользователя пока недоступен. Используйте email.");
       }
 
-      await pb
-        .collection("users")
-        .authWithPassword(formData.username, formData.password);
-
-      if (pb.authStore.isValid && pb.authStore.record) {
-        toast.success("Login successful", { style: { background: "green" } });
-        clearForm();
-        auth.setAuth({
-          id: pb.authStore.record.id,
-          email: pb.authStore.record.email,
-          username: pb.authStore.record.username,
-          avatar: pb.authStore.record.avatar,
-          collectionId: pb.authStore.record.collectionId,
-          collectionName: pb.authStore.record.collectionName,
-          autoSkip: pb.authStore.record.autoSkip,
-          created: pb.authStore.record.created,
-        });
-      }
-    } catch (e) {
-      console.error("Login error:", e);
-      toast.error("Invalid username or password", {
-        style: { background: "red" },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: formData.password,
       });
+      if (error || !data.user) throw error || new Error("Login failed");
+
+      await loadProfile(data.user.id, data.user.email || email);
+      toast.success("Login successful");
+      clearForm();
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error(error instanceof Error ? error.message : "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
   const signupWithEmail = async () => {
-    if (
-      formData.username === "" ||
-      formData.password === "" ||
-      formData.email === "" ||
-      formData.confirm_password === ""
-    ) {
-      toast.error("Please fill in all fields", {
-        style: { background: "red" },
-      });
+    if (!formData.username.trim() || !formData.password || !formData.email.trim() || !formData.confirm_password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (formData.password !== formData.confirm_password) {
+      toast.error("Passwords do not match");
       return;
     }
 
+    setLoading(true);
     try {
-      const user = await pb.collection("users").create({
-        username: formData.username,
-        email: formData.email,
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email.trim(),
         password: formData.password,
-        passwordConfirm: formData.confirm_password,
+        options: {
+          data: { username: formData.username.trim() },
+          emailRedirectTo: window.location.origin,
+        },
       });
+      if (error) throw error;
 
-      if (user) {
-        toast.success("Account created successfully. Please login.", {
-          style: { background: "green" },
-        });
-        clearForm();
+      if (data.session && data.user) {
+        await loadProfile(data.user.id, data.user.email || formData.email);
+        toast.success("Account created successfully");
+      } else {
+        toast.success("Account created. Check your email to confirm registration.");
         setTabValue("login");
       }
-    } catch (e: any) {
-      if (e.response?.data) {
-        for (const key in e.response?.data) {
-          toast.error(`${key}: ${e.response.data[key].message}`, {
-            style: { background: "red" },
-          });
-        }
-      } else {
-        toast.error("Signup failed. Please try again.", {
-          style: { background: "red" },
-        });
-      }
+      clearForm();
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast.error(error instanceof Error ? error.message : "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const clearForm = () => {
-    setFormData({
-      username: "",
-      email: "",
-      password: "",
-      confirm_password: "",
-    });
+    setFormData({ username: "", email: "", password: "", confirm_password: "" });
   };
 
   const loginWithDiscord = async () => {
-    const res = await pb.collection("users").authWithOAuth2({
-      provider: "discord",
-    });
-
-    if (pb.authStore.isValid && pb.authStore.record) {
-      await pb.collection("users").update(pb.authStore.record?.id!, {
-        username: res.meta?.username,
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "discord",
+        options: { redirectTo: window.location.origin },
       });
-
-      toast.success("Login successful", { style: { background: "green" } });
-      auth.setAuth({
-        id: pb.authStore.record.id,
-        email: pb.authStore.record.email,
-        username: pb.authStore.record.username,
-        avatar: pb.authStore.record.avatar,
-        collectionId: pb.authStore.record.collectionId,
-        collectionName: pb.authStore.record.collectionName,
-        autoSkip: pb.authStore.record.autoSkip,
-        created: pb.authStore.record.created,
-      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Discord login error:", error);
+      toast.error(error instanceof Error ? error.message : "Discord login is unavailable");
     }
   };
 
@@ -156,121 +177,45 @@ function LoginPopoverButton() {
           onValueChange={(value) => setTabValue(value as "login" | "signup")}
         >
           <TabsList>
-            <TabsTrigger onClick={clearForm} value="login">
-              Login
-            </TabsTrigger>
-            <TabsTrigger onClick={clearForm} value="signup">
-              Signup
-            </TabsTrigger>
+            <TabsTrigger onClick={clearForm} value="login">Login</TabsTrigger>
+            <TabsTrigger onClick={clearForm} value="signup">Signup</TabsTrigger>
           </TabsList>
           <TabsContent value="login" className="flex flex-col gap-2">
             <div className="mt-2">
-              <p className="text-gray-300 text-xs">Email or Username:</p>
-              <Input
-                required
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-                type="text"
-                value={formData.username}
-                placeholder="Enter your email/username"
-              />
+              <p className="text-gray-300 text-xs">Email:</p>
+              <Input required onChange={(e) => setFormData({ ...formData, username: e.target.value })} type="text" value={formData.username} placeholder="Enter your email" />
             </div>
             <div>
               <p className="text-gray-300 text-xs">Password:</p>
-              <Input
-                required
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                placeholder="Enter your password"
-              />
+              <Input required type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Enter your password" />
             </div>
-            <Button
-              variant="default"
-              className="w-full text-xs"
-              size="sm"
-              type="submit"
-              onClick={loginWithEmail}
-            >
-              Login
-            </Button>
+            <Button variant="default" className="w-full text-xs" size="sm" type="submit" loading={loading} disabled={loading} onClick={loginWithEmail}>Login</Button>
             <hr className="text-white text-xs text-center" />
-            <Button
-              variant="default"
-              className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
-              size="sm"
-              onClick={loginWithDiscord}
-            >
-              <DiscordIcon className="mr-2" />
-              Login with Discord
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs" size="sm" disabled={loading} onClick={loginWithDiscord}>
+              <DiscordIcon className="mr-2" />Login with Discord
             </Button>
           </TabsContent>
           <TabsContent value="signup" className="flex flex-col gap-2">
             <div>
               <p className="text-gray-300 text-xs">Username:</p>
-              <Input
-                required
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-                type="text"
-                placeholder="Enter your username"
-              />
+              <Input required value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} type="text" placeholder="Enter your username" />
             </div>
             <div>
               <p className="text-gray-300 text-xs">Email:</p>
-              <Input
-                required
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                type="email"
-                placeholder="Enter your email"
-              />
+              <Input required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} type="email" placeholder="Enter your email" />
             </div>
             <div>
               <p className="text-gray-300 text-xs">Password:</p>
-              <Input
-                required
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                type="password"
-                placeholder="Enter your password"
-              />
+              <Input required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} type="password" placeholder="Enter your password" />
             </div>
             <div>
               <p className="text-gray-300 text-xs">Confirm Password:</p>
-              <Input
-                required
-                onChange={(e) =>
-                  setFormData({ ...formData, confirm_password: e.target.value })
-                }
-                type="password"
-                placeholder="Enter your password again"
-              />
+              <Input required value={formData.confirm_password} onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })} type="password" placeholder="Enter your password again" />
             </div>
-            <Button
-              variant="default"
-              className="w-full text-xs"
-              size="sm"
-              type="submit"
-              onClick={signupWithEmail}
-            >
-              Signup
-            </Button>
+            <Button variant="default" className="w-full text-xs" size="sm" type="submit" loading={loading} disabled={loading} onClick={signupWithEmail}>Signup</Button>
             <hr className="text-white text-xs text-center" />
-            <Button
-              variant="default"
-              className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs"
-              size="sm"
-              onClick={loginWithDiscord}
-            >
-              <DiscordIcon className="mr-2" />
-              Signup with Discord
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-800 text-white w-full text-xs" size="sm" disabled={loading} onClick={loginWithDiscord}>
+              <DiscordIcon className="mr-2" />Signup with Discord
             </Button>
           </TabsContent>
         </Tabs>
