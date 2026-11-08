@@ -198,10 +198,13 @@ function ProfilePage() {
   }
 
   return (
-    <>
+    <div
+      className="relative isolate w-full overflow-hidden bg-slate-950 bg-cover bg-center"
+      style={targetUser.bannerUrl ? { backgroundImage: `url("${targetUser.bannerUrl}")` } : undefined}
+    >
+      <div className="absolute inset-0 bg-slate-950/50" aria-hidden="true" />
       <div
-        className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950 via-indigo-950/60 to-slate-950 border-b border-white/10 bg-cover bg-center"
-        style={targetUser.bannerUrl ? { backgroundImage: `url("${targetUser.bannerUrl}")` } : undefined}
+        className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950/55 via-indigo-950/35 to-slate-950/55 border-b border-white/10"
       >
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-slate-950/20" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.25),rgba(255,255,255,0))]" />
@@ -239,7 +242,7 @@ function ProfilePage() {
         )}
       </div>
 
-      <Container className="min-h-[70vh] mt-10 flex flex-col md:flex-row justify-around gap-8 md:gap-4">
+      <Container className="relative z-10 min-h-[70vh] mt-10 flex flex-col md:flex-row justify-around gap-8 md:gap-4">
         <div className="flex flex-col items-center gap-4 w-full md:w-1/3">
           <div className="relative group rounded-full overflow-hidden shrink-0">
             <Avatar
@@ -327,7 +330,7 @@ function ProfilePage() {
           </div>
         </div>
       </Container>
-    </>
+    </div>
   );
 }
 
