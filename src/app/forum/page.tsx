@@ -239,7 +239,7 @@ export default function ForumPage() {
         setDraft("");
         return;
       }
-      const { error } = await postMessage(value);
+      const { error } = await supabase.from("forum_messages").insert({ user_id: auth.id, content: value });
       if (error) throw error;
       setDraft("");
       await loadMessages();
