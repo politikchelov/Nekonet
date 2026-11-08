@@ -6,7 +6,7 @@ import Avatar from "@/components/common/avatar";
 import { useAuthStore } from "@/store/auth-store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useParams } from "next/navigation";
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { toast } from "sonner";
 import AnimeLists from "./components/anime-lists";
 import ActivityProgression from "./components/activity-progression";
@@ -40,19 +40,21 @@ function ProfilePage() {
   } = useQuery({
     queryKey: ["PUBLIC_PROFILE_USER", username],
     queryFn: async (): Promise<TargetProfileUser> => {
-      const record = await pb
-        .collection("users")
-        .getFirstListItem(`username = "${username}"`, {
-          requestKey: null,
-        });
+      const supabase = getSupabaseBrowserClient();
+      const { data: record, error } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url, created_at")
+        .ilike("username", username)
+        .single();
+      if (error) throw error;
 
       return {
         id: record.id,
         username: record.username,
-        avatar: record.avatar,
-        collectionId: record.collectionId,
-        collectionName: record.collectionName,
-        created: record.created,
+        avatar: record.avatar_url || "",
+        collectionId: "",
+        collectionName: "profiles",
+        created: record.created_at,
       };
     },
     enabled: !!username,
@@ -69,16 +71,27 @@ function ProfilePage() {
     const file = event.target.files?.[0];
     if (file) {
       try {
-        const res = await pb.collection("users").update(auth.id, {
-          avatar: file,
-        });
+        const supabase = getSupabaseBrowserClient();
+        const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const filePath = `${auth.id}/avatar-${Date.now()}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from("miraku-avatars")
+          .upload(filePath, file, { upsert: true, contentType: file.type });
+        if (uploadError) throw uploadError;
 
-        if (res) {
-          setAuth({ ...auth, avatar: res.avatar });
-          toast.success("Avatar updated successfully", {
-            style: { background: "green" },
-          });
-        }
+        const { data: publicUrl } = supabase.storage
+          .from("miraku-avatars")
+          .getPublicUrl(filePath);
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ avatar_url: publicUrl.publicUrl, updated_at: new Date().toISOString() })
+          .eq("id", auth.id);
+        if (profileError) throw profileError;
+
+        setAuth({ ...auth, avatar: publicUrl.publicUrl });
+        toast.success("Avatar updated successfully", {
+          style: { background: "green" },
+        });
       } catch (err: any) {
         toast.error(err?.message || "Failed to update avatar", {
           style: { background: "red" },
