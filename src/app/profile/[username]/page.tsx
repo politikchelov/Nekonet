@@ -12,13 +12,14 @@ import AnimeLists from "./components/anime-lists";
 import ActivityProgression from "./components/activity-progression";
 import Loading from "@/app/loading";
 import AnilistImport from "./components/anilist-import";
-import { useQuery } from "react-query";
-import { Camera, UserX } from "lucide-react";
+import { useQuery, useQueryClient } from "react-query";
+import { Camera, ImagePlus, UserX, X } from "lucide-react";
 
 export type TargetProfileUser = {
   id: string;
   username: string;
   avatar: string;
+  bannerUrl: string;
   collectionId: string;
   collectionName: string;
   created: string;
@@ -31,8 +32,9 @@ function ProfilePage() {
 
   const { auth, setAuth } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
-  // Fetch target user profile by username
   const {
     data: targetUser,
     isLoading,
@@ -43,7 +45,7 @@ function ProfilePage() {
       const supabase = getSupabaseBrowserClient();
       const { data: record, error } = await supabase
         .from("profiles")
-        .select("id, username, avatar_url, created_at")
+        .select("id, username, avatar_url, banner_url, created_at")
         .ilike("username", username)
         .single();
       if (error) throw error;
@@ -52,13 +54,14 @@ function ProfilePage() {
         id: record.id,
         username: record.username,
         avatar: record.avatar_url || "",
+        bannerUrl: record.banner_url || "",
         collectionId: "",
         collectionName: "profiles",
         created: record.created_at,
       };
     },
     enabled: !!username,
-    staleTime: 1000 * 60 * 5, // 5 mins cache
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 
@@ -69,34 +72,112 @@ function ProfilePage() {
   ) => {
     if (!isOwner || !auth) return;
     const file = event.target.files?.[0];
-    if (file) {
-      try {
-        const supabase = getSupabaseBrowserClient();
-        const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const filePath = `${auth.id}/avatar-${Date.now()}.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from("miraku-avatars")
-          .upload(filePath, file, { upsert: true, contentType: file.type });
-        if (uploadError) throw uploadError;
+    if (!file) return;
 
-        const { data: publicUrl } = supabase.storage
-          .from("miraku-avatars")
-          .getPublicUrl(filePath);
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ avatar_url: publicUrl.publicUrl, updated_at: new Date().toISOString() })
-          .eq("id", auth.id);
-        if (profileError) throw profileError;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Use JPG, PNG, WebP or GIF.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Avatar must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
 
-        setAuth({ ...auth, avatar: publicUrl.publicUrl });
-        toast.success("Avatar updated successfully", {
-          style: { background: "green" },
-        });
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to update avatar", {
-          style: { background: "red" },
-        });
-      }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${auth.id}/avatar-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("miraku-avatars")
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from("miraku-avatars")
+        .getPublicUrl(filePath);
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl.publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", auth.id);
+      if (profileError) throw profileError;
+
+      setAuth({ ...auth, avatar: publicUrl.publicUrl });
+      toast.success("Avatar updated.");
+      queryClient.invalidateQueries(["PUBLIC_PROFILE_USER", username]);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update avatar.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleBannerChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (!isOwner || !auth) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Use JPG, PNG, WebP or GIF.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Background must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${auth.id}/banner-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("miraku-avatars")
+        .upload(filePath, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from("miraku-avatars")
+        .getPublicUrl(filePath);
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ banner_url: publicUrl.publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", auth.id);
+      if (profileError) throw profileError;
+
+      queryClient.setQueryData<TargetProfileUser>(
+        ["PUBLIC_PROFILE_USER", username],
+        (current) => current ? { ...current, bannerUrl: publicUrl.publicUrl } : current,
+      );
+      toast.success("Profile background updated.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update background.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveBanner = async () => {
+    if (!isOwner || !auth) return;
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({ banner_url: null, updated_at: new Date().toISOString() })
+        .eq("id", auth.id);
+      if (error) throw error;
+
+      queryClient.setQueryData<TargetProfileUser>(
+        ["PUBLIC_PROFILE_USER", username],
+        (current) => current ? { ...current, bannerUrl: "" } : current,
+      );
+      toast.success("Profile background removed.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove background.");
     }
   };
 
@@ -118,14 +199,47 @@ function ProfilePage() {
 
   return (
     <>
-      <div className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950 via-indigo-950/60 to-slate-950 border-b border-white/10">
+      <div
+        className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950 via-indigo-950/60 to-slate-950 border-b border-white/10 bg-cover bg-center"
+        style={targetUser.bannerUrl ? { backgroundImage: `url("${targetUser.bannerUrl}")` } : undefined}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-slate-950/20" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.25),rgba(255,255,255,0))]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(6,182,212,0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e1b4b_1px,transparent_1px),linear-gradient(to_bottom,#1e1b4b_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_50%,#000_60%,transparent_100%)] opacity-25" />
+
+        {isOwner && (
+          <div className="absolute right-4 bottom-4 z-10 flex items-center gap-2">
+            <input
+              ref={bannerFileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleBannerChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => bannerFileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Change background
+            </button>
+            {targetUser.bannerUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveBanner}
+                aria-label="Remove profile background"
+                className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-slate-950/70 p-2 text-white shadow-lg backdrop-blur-md transition hover:bg-red-950/80"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <Container className="min-h-[70vh] mt-10 flex flex-col md:flex-row justify-around gap-8 md:gap-4">
-        {/* User Sidebar Info */}
         <div className="flex flex-col items-center gap-4 w-full md:w-1/3">
           <div className="relative group rounded-full overflow-hidden shrink-0">
             <Avatar
@@ -141,7 +255,6 @@ function ProfilePage() {
               }}
             />
 
-            {/* Owner Hover Camera & Tooltip Overlay */}
             {isOwner && (
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -157,7 +270,7 @@ function ProfilePage() {
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -173,7 +286,6 @@ function ProfilePage() {
           </div>
         </div>
 
-        {/* User Activity & Lists Section */}
         <div className="w-full md:w-2/3">
           <div className="w-full">
             {isOwner && (
