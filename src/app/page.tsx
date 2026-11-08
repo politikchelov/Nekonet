@@ -25,6 +25,7 @@ export default function Home() {
         loading={isLoading}
         featuredAnime={[
           { title: "Обновления AniVibe", anime: featuredList },
+          { title: "Посмотри это", anime: recentList.slice(6, 12) },
         ]}
       />
       <RecentCommentsSection />
