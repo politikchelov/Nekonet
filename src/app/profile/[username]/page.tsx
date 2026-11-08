@@ -20,6 +20,7 @@ export type TargetProfileUser = {
   username: string;
   avatar: string;
   bannerUrl: string;
+  profileBackgroundUrl: string;
   collectionId: string;
   collectionName: string;
   created: string;
@@ -33,6 +34,7 @@ function ProfilePage() {
   const { auth, setAuth } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
+  const profileBackgroundInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -45,7 +47,7 @@ function ProfilePage() {
       const supabase = getSupabaseBrowserClient();
       const { data: record, error } = await supabase
         .from("profiles")
-        .select("id, username, avatar_url, banner_url, created_at")
+        .select("id, username, avatar_url, banner_url, profile_background_url, created_at")
         .ilike("username", username)
         .single();
       if (error) throw error;
@@ -55,6 +57,7 @@ function ProfilePage() {
         username: record.username,
         avatar: record.avatar_url || "",
         bannerUrl: record.banner_url || "",
+        profileBackgroundUrl: record.profile_background_url || "",
         collectionId: "",
         collectionName: "profiles",
         created: record.created_at,
@@ -161,6 +164,60 @@ function ProfilePage() {
     }
   };
 
+  const handleProfileBackgroundChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isOwner || !auth) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Use JPG, PNG, WebP or GIF.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile background must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${auth.id}/profile-background-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("miraku-avatars")
+        .upload(filePath, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: publicUrl } = supabase.storage.from("miraku-avatars").getPublicUrl(filePath);
+      const { error } = await supabase.from("profiles")
+        .update({ profile_background_url: publicUrl.publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", auth.id);
+      if (error) throw error;
+      queryClient.setQueryData<TargetProfileUser>(["PUBLIC_PROFILE_USER", username], {
+        ...targetUser, profileBackgroundUrl: publicUrl.publicUrl,
+      });
+      toast.success("Profile page background updated.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update profile page background.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveProfileBackground = async () => {
+    if (!isOwner || !auth) return;
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.from("profiles")
+        .update({ profile_background_url: null, updated_at: new Date().toISOString() })
+        .eq("id", auth.id);
+      if (error) throw error;
+      queryClient.setQueryData<TargetProfileUser>(["PUBLIC_PROFILE_USER", username], {
+        ...targetUser, profileBackgroundUrl: "",
+      });
+      toast.success("Profile page background removed.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove profile page background.");
+    }
+  };
+
   const handleRemoveBanner = async () => {
     if (!isOwner || !auth) return;
     try {
@@ -200,11 +257,12 @@ function ProfilePage() {
   return (
     <div
       className="relative isolate w-full overflow-hidden bg-slate-950 bg-cover bg-center"
-      style={targetUser.bannerUrl ? { backgroundImage: `url("${targetUser.bannerUrl}")` } : undefined}
+      style={targetUser.profileBackgroundUrl ? { backgroundImage: `url("${targetUser.profileBackgroundUrl}")` } : undefined}
     >
       <div className="absolute inset-0 bg-slate-950/50" aria-hidden="true" />
       <div
-        className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950/55 via-indigo-950/35 to-slate-950/55 border-b border-white/10"
+        className="w-full h-48 md:h-64 lg:h-72 relative overflow-hidden bg-gradient-to-r from-slate-950/55 via-indigo-950/35 to-slate-950/55 border-b border-white/10 bg-cover bg-center"
+        style={targetUser.bannerUrl ? { backgroundImage: `url("${targetUser.bannerUrl}")` } : undefined}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-slate-950/20" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.25),rgba(255,255,255,0))]" />
@@ -226,8 +284,27 @@ function ProfilePage() {
               className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900"
             >
               <ImagePlus className="h-4 w-4" />
-              Change background
+              Change banner
             </button>
+            <input ref={profileBackgroundInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleProfileBackgroundChange} className="hidden" />
+            <button
+              type="button"
+              onClick={() => profileBackgroundInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Change page background
+            </button>
+            {targetUser.profileBackgroundUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveProfileBackground}
+                aria-label="Remove profile page background"
+                className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-slate-950/70 p-2 text-white shadow-lg backdrop-blur-md transition hover:bg-red-950/80"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
             {targetUser.bannerUrl && (
               <button
                 type="button"
