@@ -4,7 +4,6 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { env } from "next-runtime-env";
 
 type Props = {
   url?: string;
@@ -15,19 +14,12 @@ type Props = {
   onClick?: () => void;
 };
 
-function Avatar({
-  url,
-  username,
-  id,
-  className,
-  collectionID,
-  onClick,
-}: Props) {
-  const src = `${env("NEXT_PUBLIC_POCKETBASE_URL")}/api/files/${collectionID}/${id}/${url}`;
+function Avatar({ url, username, className, onClick }: Props) {
+  const src = url || undefined;
 
   return (
     <AvatarCN className={className} onClick={onClick}>
-      <AvatarImage src={src} alt={username} />
+      <AvatarImage src={src} alt={username || "User avatar"} />
       <AvatarFallback>
         {username?.charAt(0).toUpperCase()}
         {username?.charAt(1).toLowerCase()}
