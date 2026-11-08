@@ -252,7 +252,6 @@ export default function ForumPage() {
 
   const canModerate = ["owner", "admin", "moderator"].includes(role);
   const canAdmin = ["owner", "admin"].includes(role);
-  const canOwner = role === "owner";
 
   const messageAction = async (action: "pin" | "unpin" | "delete", id: string) => {
     try {
@@ -329,7 +328,7 @@ export default function ForumPage() {
                     </div>
                     <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-200">{m.content}</p>
                     <div className="mt-2 flex items-center gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                      <button onClick={async () => { const reason = window.prompt("Причина жалобы?"); if (!reason?.trim()) return; const { error } = await supabase.from("forum_reports").insert({ reporter_id: auth.id, message_id: m.id, reported_user_id: m.user_id, reason: reason.trim() }); error ? toast.error(error.message) : toast.success("Жалоба отправлена."); }} className="text-[10px] text-slate-500 hover:text-amber-300"><Flag className="mr-1 inline h-3 w-3" />Пожаловаться</button>
+                      <button onClick={async () => { const reason = window.prompt("Причина жалобы?"); if (!reason?.trim()) return; const { error } = await supabase.from("forum_reports").insert({ reporter_id: auth.id, message_id: m.id, reported_user_id: m.user_id, reason: reason.trim() }); if (error) toast.error(error.message); else toast.success("Жалоба отправлена."); }} className="text-[10px] text-slate-500 hover:text-amber-300"><Flag className="mr-1 inline h-3 w-3" />Пожаловаться</button>
                       {canModerate && <span className="text-[10px] text-slate-700">ID: {m.id}</span>}
                       {canAdmin && <button onClick={() => messageAction(m.pinned ? "unpin" : "pin", m.id)} className="text-[10px] text-cyan-400 hover:text-cyan-200">{m.pinned ? "Открепить" : "Закрепить"}</button>}
                       {canModerate && <button onClick={() => messageAction("delete", m.id)} className="text-[10px] text-rose-400 hover:text-rose-300"><Trash2 className="mr-1 inline h-3 w-3" />Удалить</button>}
