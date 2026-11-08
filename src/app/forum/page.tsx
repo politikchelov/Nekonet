@@ -175,6 +175,10 @@ export default function ForumPage() {
         const target = parts[0]?.replace(/^@/, "");
         const duration = /^\d+$/.test(parts[1] || "") ? Number(parts[1]) : null;
         const reason = duration === null ? parts.slice(1).join(" ") : parts.slice(2).join(" ");
+        const postMessage = async (content: string) => {
+          const { error } = await supabase.from("forum_messages").insert({ user_id: auth.id, content });
+          if (error) throw error;
+        };
 
         if (command === "help") { setShowHelp(true); setDraft(""); return; }
         if (command === "rules") { toast.info("Уважай участников. Без спама, оскорблений, рекламы и публикации личных данных. Следуй указаниям модерации."); setDraft(""); return; }
@@ -186,21 +190,21 @@ export default function ForumPage() {
         }
         if (command === "me") {
           if (!rest) throw new Error("Напиши действие после /me");
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: "＊ " + auth.username + " " + rest });
+          await postMessage("＊ " + auth.username + " " + rest);
         } else if (command === "roll") {
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: "🎲 Выпало: " + (Math.floor(Math.random() * 6) + 1) });
+          await postMessage("🎲 Выпало: " + (Math.floor(Math.random() * 6) + 1));
         } else if (command === "coinflip") {
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: "🪙 " + (Math.random() < 0.5 ? "Орёл" : "Решка") + "!" });
+          await postMessage("🪙 " + (Math.random() < 0.5 ? "Орёл" : "Решка") + "!");
         } else if (command === "choose") {
           const choices = rest.split("|").map((x) => x.trim()).filter(Boolean);
           if (choices.length < 2) throw new Error("Пример: /choose чай | кофе");
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: "🎯 Мой выбор: " + choices[Math.floor(Math.random() * choices.length)] });
+          await postMessage("🎯 Мой выбор: " + choices[Math.floor(Math.random() * choices.length)]);
         } else if (command === "8ball") {
           if (!rest) throw new Error("Задай вопрос после /8ball");
           const answers = ["Определённо да ✨", "Похоже на то", "Пока неясно", "Спроси позже", "Скорее нет", "Звёзды говорят: да"];
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: "🔮 " + answers[Math.floor(Math.random() * answers.length)] });
+          await postMessage("🔮 " + answers[Math.floor(Math.random() * answers.length)]);
         } else if (command === "shrug" || command === "tableflip") {
-          await supabase.from("forum_messages").insert({ user_id: auth.id, content: command === "shrug" ? "¯\\_(ツ)_/¯" : "(╯°□°)╯︵ ┻━┻" });
+          await postMessage(command === "shrug" ? "¯\\_(ツ)_/¯" : "(╯°□°)╯︵ ┻━┻");
         } else if (command === "report") {
           const reported = parts[0]?.replace(/^@/, "");
           const reportReason = parts.slice(1).join(" ").trim();
@@ -231,13 +235,11 @@ export default function ForumPage() {
         } else {
           throw new Error("Неизвестная команда. Напиши /help");
         }
-        const { error: insertError } = await Promise.resolve({ error: null });
-        if (insertError) throw insertError;
         await loadMessages();
         setDraft("");
         return;
       }
-      const { error } = await supabase.from("forum_messages").insert({ user_id: auth.id, content: value });
+      const { error } = await postMessage(value);
       if (error) throw error;
       setDraft("");
       await loadMessages();
