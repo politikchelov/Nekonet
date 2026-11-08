@@ -17,7 +17,7 @@ import useScrollPosition from "@/hooks/use-scroll-position";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "./ui/sheet";
 import LoginPopoverButton from "./login-popover-button";
 import { useAuthStore } from "@/store/auth-store";
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import NavbarAvatar from "./navbar-avatar";
 import { toast } from "sonner";
 
@@ -30,36 +30,59 @@ const NavBar = () => {
   const isHeaderSticky = y > 0;
 
   useEffect(() => {
+    let mounted = true;
+    const supabase = getSupabaseBrowserClient();
+
     const refreshAuth = async () => {
       try {
-        const stored = localStorage.getItem("pocketbase_auth");
-        if (!stored) return;
-        const auth_token = JSON.parse(stored);
-        if (auth_token) {
-          const user = await pb.collection("users").authRefresh();
-          if (user) {
-            auth.setAuth({
-              id: user.record.id,
-              email: user.record.email,
-              username: user.record.username,
-              avatar: user.record.avatar,
-              collectionId: user.record.collectionId,
-              collectionName: user.record.collectionName,
-              autoSkip: user.record.autoSkip,
-              created: user.record.created,
-            });
-          }
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!session?.user) {
+          if (mounted) auth.clearAuth();
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, username, avatar_url, auto_skip, created_at")
+          .eq("id", session.user.id)
+          .single();
+        if (profileError) throw profileError;
+
+        if (mounted) {
+          auth.setAuth({
+            id: profile.id,
+            email: session.user.email || "",
+            username: profile.username,
+            avatar: profile.avatar_url || "",
+            collectionId: "",
+            collectionName: "profiles",
+            autoSkip: !!profile.auto_skip,
+            created: profile.created_at,
+          });
         }
       } catch (e) {
-        console.error("Auth refresh error:", e);
-        localStorage.removeItem("pocketbase_auth");
-        auth.clearAuth();
-        toast.error("Срок действия сессии истёк.", {
-          style: { background: "red" },
-        });
+        console.error("Supabase auth refresh error:", e);
+        if (mounted) {
+          auth.clearAuth();
+          toast.error("Не удалось восстановить сессию. Войдите снова.");
+        }
+      } finally {
+        if (mounted) auth.setIsRefreshing(false);
       }
     };
+
     refreshAuth();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        auth.clearAuth();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   return (
