@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!q || q.length > 120) {
       return NextResponse.json({ error: "A search query is required." }, { status: 400 });
     }
-    endpoint = `/search?q=${encodeURIComponent(q)}`;
+    const limit = Math.max(1, Math.min(30, Number(request.nextUrl.searchParams.get("limit")) || 20));\n    endpoint = `/search?q=${encodeURIComponent(q)}&limit=${limit}`;
   } else if (resource === "recent" && segments.length === 1) {
     const cursor = request.nextUrl.searchParams.get("cursor");
     endpoint = cursor
