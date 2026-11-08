@@ -6,7 +6,6 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth-store";
 import styles from "../heatmap.module.css";
 import { Tooltip } from "react-tooltip";
-import { WatchHistory } from "@/hooks/use-get-bookmark";
 import { Tv, Sparkles, Calendar, Clock, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -109,7 +108,7 @@ const ActivityProgression = ({ targetUser }: Props) => {
 
         bookmarks.forEach((b) => {
           const watchList = b.watch_history || [];
-          watchList.forEach((w: WatchHistory) => {
+          watchList.forEach((w) => {
             if (!w.created_at) return;
             const dateStr = w.created_at.substring(0, 10);
             const wYear = new Date(w.created_at).getFullYear();
