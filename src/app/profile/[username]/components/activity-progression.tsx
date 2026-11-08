@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import CalendarHeatmap from "react-calendar-heatmap";
-import { pb } from "@/lib/pocketbase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth-store";
 import styles from "../heatmap.module.css";
 import { Tooltip } from "react-tooltip";
@@ -57,14 +57,18 @@ const ActivityProgression = ({ targetUser }: Props) => {
   // Fetch true user account creation timestamp directly from PocketBase
   useEffect(() => {
     if (!effectiveUser?.id) return;
-    pb.collection("users")
-      .getOne(effectiveUser.id, { requestKey: null })
-      .then((userRecord) => {
-        if (userRecord?.created) {
-          const cDate = new Date(userRecord.created);
-          setUserCreatedDate(cDate);
-          if (auth && effectiveUser.id === auth.id && auth.created !== userRecord.created) {
-            setAuth({ ...auth, created: userRecord.created });
+    getSupabaseBrowserClient()
+      .from("profiles")
+      .select("created_at")
+      .eq("id", effectiveUser.id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (data?.created_at) {
+          const created = data.created_at;
+          setUserCreatedDate(new Date(created));
+          if (auth && effectiveUser.id === auth.id && auth.created !== created) {
+            setAuth({ ...auth, created });
           }
         }
       })
@@ -94,22 +98,22 @@ const ActivityProgression = ({ targetUser }: Props) => {
     const fetchActivityData = async () => {
       try {
         setIsLoading(true);
-        const bookmarks = await pb.collection<Bookmark>("bookmarks").getFullList({
-          filter: `user = "${effectiveUser.id}"`,
-          expand: "watchHistory",
-          requestKey: null,
-        });
+        const { data: bookmarks, error } = await getSupabaseBrowserClient()
+          .from("bookmarks")
+          .select("id,anime_id,anime_title,thumbnail,watch_history(id,episode_number,current_seconds,created_at)")
+          .eq("user_id", effectiveUser.id);
+        if (error) throw error;
 
         const allActivities: ActivityItem[] = [];
         const dailyCounts: Record<string, number> = {};
         let count = 0;
 
         bookmarks.forEach((b) => {
-          const watchList = b.expand?.watchHistory || [];
+          const watchList = b.watch_history || [];
           watchList.forEach((w: WatchHistory) => {
-            if (!w.created) return;
-            const dateStr = w.created.substring(0, 10);
-            const wYear = new Date(w.created).getFullYear();
+            if (!w.created_at) return;
+            const dateStr = w.created_at.substring(0, 10);
+            const wYear = new Date(w.created_at).getFullYear();
 
             // Count for selected year heatmap
             if (wYear === selectedYear) {
@@ -119,12 +123,12 @@ const ActivityProgression = ({ targetUser }: Props) => {
 
             allActivities.push({
               id: w.id,
-              animeId: b.animeId,
-              animeTitle: b.animeTitle || "Anime",
+              animeId: b.anime_id,
+              animeTitle: b.anime_title || "Anime",
               thumbnail: b.thumbnail,
-              episodeNumber: w.episodeNumber,
-              current: w.current || 0,
-              created: w.created,
+              episodeNumber: w.episode_number,
+              current: w.current_seconds || 0,
+              created: w.created_at,
             });
           });
         });
