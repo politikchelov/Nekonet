@@ -7,7 +7,6 @@ import { useGetAnimeSchedule } from "@/query/get-anime-schedule";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ROUTES } from "@/constants/routes";
 import { Clock, Play, Calendar } from "lucide-react";
 
 function AnimeSchedule() {
