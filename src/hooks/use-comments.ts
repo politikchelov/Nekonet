@@ -146,6 +146,8 @@ export const useAddComment = () => {
       queryClient.invalidateQueries(GET_COMMENTS_KEY);
       queryClient.invalidateQueries(GET_RECENT_COMMENTS_KEY);
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to post comment"),
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to post comment");
+    },
   });
 };
