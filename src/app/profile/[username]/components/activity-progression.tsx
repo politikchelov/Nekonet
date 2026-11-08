@@ -71,8 +71,7 @@ const ActivityProgression = ({ targetUser }: Props) => {
             setAuth({ ...auth, created });
           }
         }
-      })
-      .catch(console.error);
+      }, console.error);
   }, [effectiveUser?.id]);
 
   const joinedYear = userCreatedDate.getFullYear();
